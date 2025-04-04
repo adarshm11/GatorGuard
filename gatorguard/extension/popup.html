@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Link Tracker</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div id="auth-status"></div>
+
+      <div id="login-prompt" style="display: none">
+        <p>Please log in to use this extension</p>
+        <button id="loginButton">Log In</button>
+      </div>
+
+      <div id="main-content">
+        <div class="current-tab">
+          <h2>Current Tab</h2>
+          <div id="currentTitle" class="title">Loading...</div>
+          <div id="currentUrl" class="url">Loading...</div>
+        </div>
+
+        <div class="recent-links">
+          <h2>Recent Links</h2>
+          <ul id="recentLinksList"></ul>
+        </div>
+
+        <button id="refreshButton">Refresh</button>
+      </div>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>
