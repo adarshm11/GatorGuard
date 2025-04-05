@@ -1,14 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
-from typing import List
+from typing import Optional, List
 import datetime
 import uvicorn  
 from supabase import create_client
 from supabase_client import check_if_exists, retrieve_permission, add_website_to_db, SUPABASE_KEY, SUPABASE_URL
 import google.generativeai as genai
-# from google import genai
 from dotenv import load_dotenv
 import os
 
@@ -60,6 +58,9 @@ class SongResponse(BaseModel):
 
 class WebsiteCheckRequest(BaseModel):
     url: str
+
+class ModeData(BaseModel):
+    mode: str
 
 # Store links in memory (in real app, use a database)
 received_links = []
@@ -130,10 +131,11 @@ def process_text_content(text_content: TextContent):
 def process_song_link():
     try:
         GENAI_API_KEY=os.getenv("GEMINI_API_KEY_2")
-        client=genai.Client(api_key=GENAI_API_KEY)
-
         if not(GENAI_API_KEY):
-            raise Exception("No API key found")
+            raise HTTPException(status_code=400, detail="No API key found")
+        genai.configure(api_key=GENAI_API_KEY)
+        client=genai.GenerativeModel('gemini-2.0-flash')
+
         query=f"""
            Recommend 5 songs related to "study mode" with a focus on concentration for interview study.
            Only include songs with non-lyrics
@@ -143,10 +145,7 @@ def process_song_link():
         """
         #Note: Find a way to make it run when the person clicks
 
-        response=client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=query
-        )
+        response=client.generate_content(query)
 
         #Psuedo code for reload
         # IF reload == True
@@ -244,6 +243,12 @@ def add_db_entry(db_entry: DBEntry):
             "success": False,
             "errorMessage": str(e),
         }
+    
+@app.post("/received-mode/")
+def receive_browsing_mode(mode_data: ModeData):
+    print(f'Received mode: {mode_data.mode}')
+    return {"success" : True}
+
 
 def evaluate_website_for_mode(url, title, mode):
     try:
