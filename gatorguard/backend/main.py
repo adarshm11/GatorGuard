@@ -155,6 +155,7 @@ def process_song_link():
         #Psuedo code for reload
         # IF reload == True
         #Generate new songs and remove the previous songs in the list 
+        #Actualy thinking of doing this in the update function
         parts=response.text.strip().lower()
 
         #Note: Find a way to make it run when the person clicks
@@ -166,6 +167,12 @@ def process_song_link():
     except Exception as e:
         print(f'Error in processing song link: {e}')
         return False
+
+
+@app.put("/reload-songs")
+def reload_songs():
+    pass
+
 
 @app.get("/received-songs")
 def get_received_songs() -> SongResponse:
