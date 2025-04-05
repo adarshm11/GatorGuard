@@ -6,6 +6,7 @@ import {
   checkWebsiteInDB,
 } from "../utils/backendApi";
 
+
 export async function POST(req) {
   let stagehand = null;
   let url, title, timestamp, mode;
@@ -23,6 +24,10 @@ export async function POST(req) {
     title = requestData.title;
     timestamp = requestData.timestamp;
     mode = requestData.mode;
+
+    console.log(`Processing request for URL: ${url}`);
+    console.log(`Title: ${title || "Not provided"}`);
+    console.log(`Timestamp: ${timestamp}`);
 
     // Validate request parameters
     if (!url) {

@@ -6,6 +6,7 @@ function App() {
       <Popup />
     </div>
   );
+
 }
 
 export default App;
