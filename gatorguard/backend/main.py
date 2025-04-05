@@ -8,11 +8,13 @@ from supabase import create_client
 from supabase_client import check_if_exists, retrieve_permission, add_website_to_db, SUPABASE_KEY, SUPABASE_URL, add_user_mode,update_user_mode
 import google.generativeai as genai
 from dotenv import load_dotenv
+from song_output import router
 import os
 
 load_dotenv()
 app = FastAPI()
 
+app.include_router(router)
 # Configure CORS to allow requests from your Chrome extension
 app.add_middleware(
     CORSMiddleware,
@@ -50,7 +52,6 @@ class SongLink(BaseModel):
     title:str
     artist:str
     #album:str // we can add this latter if needed
-
 
 class SongResponse(BaseModel):
     all_songs:List[SongLink]
