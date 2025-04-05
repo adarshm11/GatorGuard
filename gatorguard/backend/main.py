@@ -1,14 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
-from typing import List
+from typing import Optional, List
 import datetime
 import uvicorn  
 from supabase import create_client
 from supabase_client import check_if_exists, retrieve_permission, add_website_to_db, SUPABASE_KEY, SUPABASE_URL
 import google.generativeai as genai
-from google import genai
 from dotenv import load_dotenv
 import os
 
