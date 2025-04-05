@@ -12,7 +12,7 @@ const Navbar = async () => {
   const LinkClass = "rounded-md hover:text-white py-2 px-3 transition-colors duration-300 ease-in-out"
 
   return (
-    <nav className="w-full flex items-center pt-4 rounded-lg shadow-2xl">
+    <nav className="bg-yellow-600 w-full flex items-center mt-4 rounded-lg shadow-2xl">
       <div className="flex w-full items-center justify-between px-8 py-4">
         <div className="flex-shrink-0">
           <Link className={"font-bold " + LinkClass} href="/">
