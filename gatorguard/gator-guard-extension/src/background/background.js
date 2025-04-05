@@ -391,6 +391,68 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+// Add this to your message handlers in the background script
+
+// Handle SYNC_MODE_WITH_DATABASE message
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === "SYNC_MODE_WITH_DATABASE") {
+    fetchModeFromDatabase()
+      .then((mode) => {
+        // Update local storage with the mode from database
+        chrome.storage.local.set({ currentMode: mode }, () => {
+          // Send response back to the popup
+          sendResponse({ success: true, mode });
+
+          // Broadcast the update to all extension pages
+          chrome.runtime.sendMessage({
+            type: "BACKGROUND_STATE_UPDATED",
+            data: { currentMode: mode },
+          });
+        });
+      })
+      .catch((error) => {
+        console.error("Error syncing mode with database:", error);
+        sendResponse({ success: false, error: error.message });
+      });
+
+    // Return true to indicate you will send a response asynchronously
+    return true;
+  }
+});
+
+// Function to fetch mode from database
+async function fetchModeFromDatabase() {
+  try {
+    // Get the user's auth token from storage
+    const { token } = await chrome.storage.local.get("token");
+
+    if (!token) {
+      throw new Error("User not authenticated");
+    }
+
+    // Make request to your API
+    const response = await fetch("http://localhost:3000/api/user/mode", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.mode; // Return the mode from the API
+  } catch (error) {
+    console.error("Failed to fetch mode from database:", error);
+    // Return the current mode as fallback
+    const { currentMode } = await chrome.storage.local.get("currentMode");
+    return currentMode || "work";
+  }
+}
+
 // Send a message when background script initializes to verify it's running
 chrome.runtime
   .sendMessage({

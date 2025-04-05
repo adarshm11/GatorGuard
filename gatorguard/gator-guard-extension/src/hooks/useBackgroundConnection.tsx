@@ -100,6 +100,27 @@ export const useBackgroundConnection = () => {
     }
   };
 
+  // Function to sync mode with Supabase
+  const syncModeWithDatabase = async () => {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: "SYNC_MODE_WITH_DATABASE",
+      });
+
+      if (response && response.success) {
+        setBackgroundState((prev) => ({
+          ...prev,
+          currentMode: response.mode,
+        }));
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error("Failed to sync mode with database:", err);
+      return false;
+    }
+  };
+
   // Listen for changes from background script
   useEffect(() => {
     const listener = (message: any) => {
@@ -155,5 +176,6 @@ export const useBackgroundConnection = () => {
     refreshState,
     setMode,
     logout,
+    syncModeWithDatabase,
   };
 };
