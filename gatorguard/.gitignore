@@ -42,3 +42,6 @@ next-env.d.ts
 
 .python-version
 __pycache__
+
+/backend/gatorguard-venv/
+/backend/.env/
