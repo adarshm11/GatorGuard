@@ -114,9 +114,7 @@ export default function Home() {
               </label>
             ))}
           </div>
-        )}
-
-        {/* Submit and Reset buttons */}
+        )}        
         {activeMode && (
           <div className="flex flex-row">
             <button
