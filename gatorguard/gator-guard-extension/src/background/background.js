@@ -4,13 +4,71 @@ let isAuthenticated = false;
 // Global variable to store current mode
 let currentMode = "work"; // Default to work mode
 
+// Add these global variables to store the additional settings
+let studySubmodeSet = null;
+let lyricsStatus = false;
+
 // In background.js initialization
-chrome.storage.local.get("currentMode", (result) => {
-  if (result.currentMode) {
-    currentMode = result.currentMode;
-    console.log(`Loaded saved mode: ${currentMode}`);
+chrome.storage.local.get(
+  ["currentMode", "studySubmodeSet", "lyricsStatus"],
+  (result) => {
+    if (result.currentMode) {
+      currentMode = result.currentMode;
+      console.log(`Loaded saved mode: ${currentMode}`);
+    }
+
+    if (result.studySubmodeSet !== undefined) {
+      studySubmodeSet = result.studySubmodeSet;
+    }
+
+    if (result.lyricsStatus !== undefined) {
+      lyricsStatus = result.lyricsStatus;
+    }
   }
-});
+);
+
+// Add this function to synchronize mode with the database
+function syncModeWithDatabase() {
+  if (isAuthenticated) {
+    fetch("http://localhost:3000/api/user/mode", {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.mode) {
+          currentMode = data.mode;
+          studySubmodeSet = data.study_submode_set;
+          lyricsStatus = data.lyrics_status;
+
+          console.log("Mode synced from database:", data);
+
+          // Update local storage
+          chrome.storage.local.set({
+            currentMode: currentMode,
+            studySubmodeSet: studySubmodeSet,
+            lyricsStatus: lyricsStatus,
+          });
+
+          // Broadcast the updated mode
+          chrome.runtime.sendMessage({
+            type: "BACKGROUND_STATE_UPDATED",
+            data: {
+              currentMode: currentMode,
+              studySubmodeSet: studySubmodeSet,
+              lyricsStatus: lyricsStatus,
+            },
+          });
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to sync mode from database:", error);
+      });
+  }
+}
 
 // Check authentication status periodically
 function checkAuthentication() {
@@ -31,6 +89,11 @@ function checkAuthentication() {
         "Authentication status:",
         isAuthenticated ? "Logged in" : "Not logged in"
       );
+
+      // If user just became authenticated, sync mode from database
+      if (!wasAuthenticated && isAuthenticated) {
+        syncModeWithDatabase();
+      }
 
       // If authentication status changed, broadcast to all extension pages
       if (wasAuthenticated !== isAuthenticated) {
@@ -227,18 +290,51 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
 
     case "SET_MODE":
-      // Update the mode
+      // Update the mode locally
       const oldMode = currentMode;
       currentMode = message.mode;
+
+      // Get any additional parameters
+      const studySubmodeSet = message.study_submode_set;
+      const lyricsStatus = message.lyrics_status;
+
+      // Store the mode in chrome.storage for persistence
+      chrome.storage.local.set({
+        currentMode: currentMode,
+        studySubmodeSet: studySubmodeSet,
+        lyricsStatus: lyricsStatus,
+      });
+
+      // Send the mode change to the backend if authenticated
+      if (isAuthenticated) {
+        fetch("http://localhost:3000/api/user/mode", {
+          method: "POST",
+          credentials: "include", // Important for cookies
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            mode: currentMode,
+            study_submode_set: studySubmodeSet,
+            lyrics_status: lyricsStatus,
+          }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            console.log("Mode updated in database:", data);
+          })
+          .catch((error) => {
+            console.error("Failed to update mode in database:", error);
+          });
+      }
 
       // Respond with success
       sendResponse({
         success: true,
         newMode: currentMode,
+        studySubmodeSet: studySubmodeSet,
+        lyricsStatus: lyricsStatus,
       });
-
-      // Store the mode in chrome.storage for persistence
-      chrome.storage.local.set({ currentMode: currentMode });
 
       // If mode changed, recheck current tab
       if (oldMode !== currentMode) {
@@ -250,10 +346,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         type: "BACKGROUND_STATE_UPDATED",
         data: {
           currentMode: currentMode,
+          studySubmodeSet: studySubmodeSet,
+          lyricsStatus: lyricsStatus,
         },
       });
 
-      return true; // Required to use sendResponse asynchronously
+      break; // Add this break statement
 
     case "GET_MODE":
       sendResponse({

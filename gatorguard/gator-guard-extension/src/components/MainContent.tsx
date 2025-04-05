@@ -2,14 +2,18 @@ import React from "react";
 import { useBackgroundConnection } from "../hooks/useBackgroundConnection";
 
 const MainContent: React.FC = () => {
-  const {
-    authenticated,
-    recentLinks,
-    currentMode,
-    loading,
-    error,
-    setMode,
-  } = useBackgroundConnection();
+  const { authenticated, recentLinks, currentMode, loading, error, setMode } =
+    useBackgroundConnection();
+
+  const handleModeChange = async (newMode: string) => {
+    // Just pass the mode without the study_submode_set since it's not available in the popup
+    const success = await setMode(newMode);
+    if (success) {
+      console.log(`Mode successfully changed to ${newMode}`);
+    } else {
+      console.error("Failed to change mode");
+    }
+  };
 
   if (loading) {
     return (
@@ -79,7 +83,7 @@ const MainContent: React.FC = () => {
         </div>
         <div className="grid grid-cols-3 gap-3">
           <button
-            onClick={() => setMode("work")}
+            onClick={() => handleModeChange("work")}
             className={`py-2 rounded-md transition-all duration-200 font-medium ${
               currentMode === "work"
                 ? "bg-purple-600 text-white"
@@ -89,7 +93,7 @@ const MainContent: React.FC = () => {
             Work
           </button>
           <button
-            onClick={() => setMode("study")}
+            onClick={() => handleModeChange("study")}
             className={`py-2 rounded-md transition-all duration-200 font-medium ${
               currentMode === "study"
                 ? "bg-purple-600 text-white"
@@ -99,7 +103,7 @@ const MainContent: React.FC = () => {
             Study
           </button>
           <button
-            onClick={() => setMode("leisure")}
+            onClick={() => handleModeChange("leisure")}
             className={`py-2 rounded-md transition-all duration-200 font-medium ${
               currentMode === "leisure"
                 ? "bg-purple-600 text-white"

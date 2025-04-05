@@ -52,11 +52,17 @@ export const useBackgroundConnection = () => {
   };
 
   // Set mode function
-  const setMode = async (mode: string) => {
+  const setMode = async (
+    mode: string,
+    studySubmodeSet = null,
+    lyricsStatus = false
+  ) => {
     try {
       const response = await chrome.runtime.sendMessage({
         type: "SET_MODE",
         mode,
+        study_submode_set: studySubmodeSet,
+        lyrics_status: lyricsStatus,
       });
 
       if (response.success) {

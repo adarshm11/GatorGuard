@@ -5,7 +5,7 @@ from typing import Optional, List
 import datetime
 import uvicorn  
 from supabase import create_client
-from supabase_client import check_if_exists, retrieve_permission, add_website_to_db, SUPABASE_KEY, SUPABASE_URL, add_user_mode,update_user_mode
+from supabase_client import check_if_exists, retrieve_permission, add_website_to_db, SUPABASE_KEY, SUPABASE_URL, add_user_mode,update_user_mode, check_if_user_exists
 import google.generativeai as genai
 from dotenv import load_dotenv
 from song_output import router
@@ -61,12 +61,15 @@ class WebsiteCheckRequest(BaseModel):
     url: str
 
 class ModeData(BaseModel):
+    user_id: str
     mode: str
+    submode: Optional[str] = None
 
 # Store links in memory (in real app, use a database)
 received_links = []
 
 songs=[]
+
 @app.get("/")
 def read_root():
     return {"status": "online", "message": "FastAPI backend for Chrome extension"}
@@ -248,8 +251,64 @@ def add_db_entry(db_entry: DBEntry):
     
 @app.post("/received-mode/")
 def receive_browsing_mode(mode_data: ModeData):
-    print(f'Received mode: {mode_data.mode}')
-    return {"success" : True}
+    try:
+        print(f'Received mode: {mode_data.mode}, Submode: {mode_data.submode}, User ID: {mode_data.user_id}')
+        
+        client = create_client(supabase_url=SUPABASE_URL, supabase_key=SUPABASE_KEY)
+        
+        # Check if user mode already exists
+        try:
+            print(f"Checking if user mode exists for ID: {mode_data.user_id}")
+            response = client.from_('user_mode').select('*').eq('id', mode_data.user_id).execute()
+            print(f"Response data: {response.data}")
+            
+            if response.data and len(response.data) > 0:
+                print("User mode exists, updating...")
+                # Update existing user mode
+                result = update_user_mode(client, mode_data.user_id, mode_data.mode, mode_data.submode)
+            else:
+                print("User mode does not exist, adding...")
+                # Add new user mode
+                result = add_user_mode(client, mode_data.user_id, mode_data.mode, mode_data.submode)
+            
+            if result is True:
+                return {"success": True, "message": "User mode updated successfully"}
+            else:
+                return {"success": False, "error": str(result)}
+        except Exception as e:
+            print(f"Error checking user mode: {str(e)}")
+            return {"success": False, "error": f"Error checking user mode: {str(e)}"}
+            
+    except Exception as e:
+        print(f"Error updating user mode: {str(e)}")
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/user-mode/{user_id}")
+def get_user_mode(user_id: str):
+    """Get current mode for a specific user"""
+    try:
+        client = create_client(supabase_url=SUPABASE_URL, supabase_key=SUPABASE_KEY)
+        
+        # Check if user exists
+        if not check_if_user_exists(client, user_id):
+            return {"success": False, "error": f"User {user_id} does not exist"}
+            
+        # Get the user's mode from the database
+        response = client.from_('user_mode').select('mode_select,study_submode_select').eq('id', user_id).limit(1).execute()
+        
+        if response.data and len(response.data) > 0:
+            return {
+                "success": True,
+                "mode": response.data[0]["mode_select"],
+                "submode": response.data[0].get("study_submode_select")
+            }
+        else:
+            return {"success": False, "error": "User mode not found"}
+            
+    except Exception as e:
+        print(f"Error getting user mode: {str(e)}")
+        return {"success": False, "error": str(e)}
 
 
 def evaluate_website_for_mode(url, title, mode):
