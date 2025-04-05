@@ -6,7 +6,6 @@ import {
   checkWebsiteInDB,
 } from "../utils/backendApi";
 
-
 export async function POST(req) {
   let stagehand = null;
   let url, title, timestamp, mode;
@@ -116,6 +115,9 @@ export async function POST(req) {
       modelName: "gemini-2.0-flash",
       modelClientOptions: {
         apiKey: process.env.GEMINI_API_KEY,
+      },
+      localBrowserLaunchOptions: {
+        headless: true,
       },
     });
 

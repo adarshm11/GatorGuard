@@ -1,15 +1,31 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useBackgroundConnection } from "../hooks/useBackgroundConnection";
 
 const MainContent: React.FC = () => {
-  const { authenticated, recentLinks, currentMode, loading, error, setMode } =
-    useBackgroundConnection();
+  const {
+    authenticated,
+    recentLinks,
+    currentMode,
+    loading,
+    error,
+    setMode,
+    syncModeWithDatabase,
+  } = useBackgroundConnection();
+
+  // Sync mode with database when component mounts or authentication status changes
+  useEffect(() => {
+    if (authenticated) {
+      syncModeWithDatabase();
+    }
+  }, [authenticated, syncModeWithDatabase]);
 
   const handleModeChange = async (newMode: string) => {
     // Just pass the mode without the study_submode_set since it's not available in the popup
     const success = await setMode(newMode);
     if (success) {
       console.log(`Mode successfully changed to ${newMode}`);
+      // After changing mode, sync with database to confirm changes
+      await syncModeWithDatabase();
     } else {
       console.error("Failed to change mode");
     }
