@@ -8,6 +8,8 @@ import {
 
 export async function POST(req) {
   let stagehand = null;
+  let url, title, timestamp, mode;
+  let addedToDB = false;
 
   try {
     if (!globalThis.__bundlerPathsOverrides) {
@@ -16,7 +18,11 @@ export async function POST(req) {
     globalThis.__bundlerPathsOverrides["thread-stream-worker"] =
       "./node_modules/thread-stream/lib/worker.js";
 
-    const { url, title, timestamp, mode } = await req.json();
+    const requestData = await req.json();
+    url = requestData.url;
+    title = requestData.title;
+    timestamp = requestData.timestamp;
+    mode = requestData.mode;
 
     // Validate request parameters
     if (!url) {
@@ -128,7 +134,7 @@ export async function POST(req) {
     });
 
     const agentQuery = `
-        Extract the following and terminate as soon as you can, no need to scroll around the page:
+        No need to scroll around the page and terminate as soon as you can. Extract the following from the webpage:
           - Title
           - Main body text
           - Structured data          
@@ -156,6 +162,8 @@ export async function POST(req) {
         "Error occurred while adding to DB:",
         dbResponse.errorMessage
       );
+    } else {
+      addedToDB = true;
     }
 
     console.log("Closing Stagehand...");
@@ -191,10 +199,41 @@ export async function POST(req) {
       }
     }
 
+    // If we haven't added to DB yet, do it now with a default value (false for safety)
+    if (url && !addedToDB) {
+      try {
+        console.log("Adding website to DB despite Stagehand failure...");
+        const dbResponse = await addWebsiteToDB(
+          url,
+          title,
+          timestamp,
+          false,
+          mode
+        );
+
+        if (dbResponse.success) {
+          console.log("Successfully added website to DB as fallback");
+          addedToDB = true;
+        } else {
+          console.log(
+            "Failed to add website to DB as fallback:",
+            dbResponse.errorMessage
+          );
+        }
+      } catch (dbError) {
+        console.error("Error adding website to DB as fallback:", dbError);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: false,
         error: error.message,
+        addedToDB: addedToDB, // Let the client know if we added to DB anyway
+        allowed: false, // Default to false for safety if Stagehand failed
+        url,
+        title: title || url,
+        timestamp,
         stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
       }),
       {
