@@ -73,13 +73,34 @@ export const useBackgroundConnection = () => {
     }
   };
 
+  // Add a logout function to your hook
+  const logout = async () => {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: "LOGOUT",
+      });
+
+      if (response && response.success) {
+        setBackgroundState((prev) => ({
+          ...prev,
+          authenticated: false,
+        }));
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error("Failed to logout:", err);
+      return false;
+    }
+  };
+
   // Listen for changes from background script
   useEffect(() => {
     const listener = (message: any) => {
       if (message.type === "BACKGROUND_STATE_UPDATED") {
         setBackgroundState((prevState) => ({
           ...prevState,
-          ...message.updates,
+          ...message.data, // CHANGED: was message.updates before
         }));
       }
     };
@@ -94,11 +115,39 @@ export const useBackgroundConnection = () => {
     };
   }, []);
 
+  useEffect(() => {
+    // Check auth status when component mounts
+    const checkAuthStatus = async () => {
+      try {
+        const response = await chrome.runtime.sendMessage({
+          type: "CHECK_AUTH",
+        });
+
+        if (response) {
+          setBackgroundState((prev) => ({
+            ...prev,
+            authenticated: response.authenticated,
+          }));
+        }
+      } catch (err) {
+        console.error("Failed to check auth status:", err);
+      }
+    };
+
+    checkAuthStatus();
+
+    // Optionally set up periodic checks
+    const interval = setInterval(checkAuthStatus, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, []);
+
   return {
     ...backgroundState,
     loading,
     error,
     refreshState,
     setMode,
+    logout,
   };
 };

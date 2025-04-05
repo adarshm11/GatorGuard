@@ -1,6 +1,17 @@
 // Global authentication state
 let isAuthenticated = false;
 
+// Global variable to store current mode
+let currentMode = "work"; // Default to work mode
+
+// In background.js initialization
+chrome.storage.local.get("currentMode", (result) => {
+  if (result.currentMode) {
+    currentMode = result.currentMode;
+    console.log(`Loaded saved mode: ${currentMode}`);
+  }
+});
+
 // Check authentication status periodically
 function checkAuthentication() {
   fetch("http://localhost:3000/api/checkauth", {
@@ -12,15 +23,32 @@ function checkAuthentication() {
   })
     .then((response) => response.json())
     .then((data) => {
+      // Store the previous state before updating
+      const wasAuthenticated = isAuthenticated;
       isAuthenticated = data.authenticated;
+
       console.log(
         "Authentication status:",
         isAuthenticated ? "Logged in" : "Not logged in"
       );
+
+      // If authentication status changed, broadcast to all extension pages
+      if (wasAuthenticated !== isAuthenticated) {
+        chrome.runtime.sendMessage({
+          type: "BACKGROUND_STATE_UPDATED",
+          data: { authenticated: isAuthenticated },
+        });
+      }
     })
     .catch((error) => {
       console.error("Auth check failed:", error);
       isAuthenticated = false;
+
+      // Also broadcast on error (assume logged out)
+      chrome.runtime.sendMessage({
+        type: "BACKGROUND_STATE_UPDATED",
+        data: { authenticated: false },
+      });
     });
 }
 
@@ -106,9 +134,7 @@ function storeLink(url, title) {
 
 // Send to backend and handle response
 function sendLinkToJSBackend(url, title) {
-  // Store the mode in a variable so you can use it in the response handling
-  const currentMode = "work"; // This could be dynamic in the future
-
+  // Use the global currentMode variable instead of hardcoding it
   fetch("http://localhost:3000/api/stagehand", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -131,7 +157,8 @@ function sendLinkToJSBackend(url, title) {
         // Show a notification with the current mode
         chrome.notifications.create({
           type: "basic",
-          iconUrl: "sf_hacks_sfsu_logo.jpg",
+          // Use chrome.runtime.getURL to get the absolute path to your extension's resources
+          iconUrl: chrome.runtime.getURL("images/logo.jpg"),
           title: `${
             currentMode.charAt(0).toUpperCase() + currentMode.slice(1)
           } Focus Mode`,
@@ -142,9 +169,44 @@ function sendLinkToJSBackend(url, title) {
     .catch((error) => console.error("Error:", error));
 }
 
-// Add at the end of your background.js file
+// Function to recheck current tab with new mode
+function recheckCurrentTab() {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs.length > 0) {
+      const currentTab = tabs[0];
 
-// Listen for messages from React components
+      // Skip if no URL or if it's a special URL
+      if (!currentTab.url) return;
+
+      // Parse URL to check for localhost:3000
+      let urlObj;
+      try {
+        urlObj = new URL(currentTab.url);
+
+        // Skip chrome:// URLs and localhost:3000
+        const isLocalhost3000 =
+          urlObj.hostname === "localhost" && urlObj.port === "3000";
+
+        if (
+          currentTab.url.startsWith("chrome://") ||
+          currentTab.url === "about:blank" ||
+          isLocalhost3000
+        ) {
+          console.log(`Skipping URL during recheck: ${currentTab.url}`);
+          return;
+        }
+
+        // Process the tab if it passes all checks
+        sendLinkToJSBackend(currentTab.url, currentTab.title);
+      } catch (e) {
+        console.log("Invalid URL during recheck:", currentTab.url, e);
+        return;
+      }
+    }
+  });
+}
+
+// Listen for messages from React components and popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log("Background received message:", message);
 
@@ -161,16 +223,73 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true; // Keep message channel open for async response
 
     case "GET_CURRENT_MODE":
-      sendResponse({ mode: "work" }); // Replace with your mode logic
+      sendResponse({ mode: currentMode }); // Replace with your mode logic
       break;
 
     case "SET_MODE":
-      // Logic to set the mode
-      sendResponse({ success: true, newMode: message.mode });
-      break;
+      // Update the mode
+      const oldMode = currentMode;
+      currentMode = message.mode;
+
+      // Respond with success
+      sendResponse({
+        success: true,
+        newMode: currentMode,
+      });
+
+      // Store the mode in chrome.storage for persistence
+      chrome.storage.local.set({ currentMode: currentMode });
+
+      // If mode changed, recheck current tab
+      if (oldMode !== currentMode) {
+        recheckCurrentTab();
+      }
+
+      // Broadcast the change to any open extension pages
+      chrome.runtime.sendMessage({
+        type: "BACKGROUND_STATE_UPDATED",
+        data: {
+          currentMode: currentMode,
+        },
+      });
+
+      return true; // Required to use sendResponse asynchronously
+
+    case "GET_MODE":
+      sendResponse({
+        mode: currentMode,
+      });
+      return true;
 
     default:
       sendResponse({ error: "Unknown message type" });
+  }
+});
+
+// Fix the logout handler - change "authenticated" to "isAuthenticated"
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Handle logout
+  if (message.type === "LOGOUT") {
+    // Clear any auth tokens or state
+    isAuthenticated = false; // CHANGED: was "authenticated" before
+    chrome.storage.local.remove("authToken");
+
+    // Notify all extension pages
+    chrome.runtime.sendMessage({
+      type: "BACKGROUND_STATE_UPDATED",
+      data: { authenticated: false },
+    });
+
+    sendResponse({ success: true });
+    return true;
+  }
+
+  // Handle authentication check
+  if (message.type === "CHECK_AUTH") {
+    // Add logic to verify if the user is still logged in
+    checkAuthentication(); // Actually perform a fresh check
+    sendResponse({ authenticated: isAuthenticated });
+    return true;
   }
 });
 
