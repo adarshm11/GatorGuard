@@ -6,7 +6,7 @@ from typing import List
 import datetime
 import uvicorn  
 from supabase import create_client
-from supabase_client import check_if_exists, retrieve_permission, add_website_to_db, SUPABASE_KEY, SUPABASE_URL
+from supabase_client import check_if_exists, retrieve_permission, add_website_to_db, SUPABASE_KEY, SUPABASE_URL, add_user_mode,update_user_mode
 import google.generativeai as genai
 from google import genai
 from dotenv import load_dotenv
@@ -34,9 +34,9 @@ class LinkData(BaseModel):
 class TextContent(BaseModel):
     text_content: str
 
-class SongTextContent(BaseModel):
-    song_text_content:str # thinking of doing a getting a mode
-
+class UserMode(BaseModel):
+    user_id:str
+    mode_select
 class SongLink(BaseModel):
     url:str
     title:str
