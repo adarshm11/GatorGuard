@@ -25,7 +25,7 @@ def check_if_user_exists(supabase:Client,user_id:str)-> bool:
 
 def add_website_to_db(supabase: Client, website_url: str, website_title: str, timestamp: str = None, 
                       study_allowed: bool = False, work_allowed: bool = False, leisure_allowed: bool = True):
-      try:
+    try:
         # Check if website already exists
         if check_if_exists(supabase, website_url):
             print(f"Website already exists in database: {website_url}")

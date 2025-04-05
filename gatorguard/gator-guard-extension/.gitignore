@@ -25,3 +25,5 @@ dist-ssr
 
 /backend/gatorguard-venv/
 /backend/.env/
+
+build
