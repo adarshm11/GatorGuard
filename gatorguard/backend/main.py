@@ -59,6 +59,9 @@ class SongResponse(BaseModel):
 class WebsiteCheckRequest(BaseModel):
     url: str
 
+class ModeData(BaseModel):
+    mode: str
+
 # Store links in memory (in real app, use a database)
 received_links = []
 
@@ -242,6 +245,12 @@ def add_db_entry(db_entry: DBEntry):
             "success": False,
             "errorMessage": str(e),
         }
+    
+@app.post("/received-mode/")
+def receive_browsing_mode(mode_data: ModeData):
+    print(f'Received mode: {mode_data.mode}')
+    return {"success" : True}
+
 
 def evaluate_website_for_mode(url, title, mode):
     try:
