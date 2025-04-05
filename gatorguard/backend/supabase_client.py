@@ -20,7 +20,7 @@ def retrieve_permission(supabase: Client, website_url: str, browser_mode: str) -
     return True
 
 def check_if_user_exists(supabase:Client,user_id:str)-> bool:
-    response = supabase.from_('users').select('user_id').eq('user_id', user_id).limit(1).execute()
+    response = supabase.from_('user_profiles').select('id').eq('id', user_id).limit(1).execute()
     return bool(response.data)
 
 def add_website_to_db(supabase: Client, website_url: str, website_title: str, timestamp: str = None, 
@@ -67,56 +67,86 @@ def add_website_to_db(supabase: Client, website_url: str, website_title: str, ti
         return {"success": False, "error": str(e)}
       
 def add_user_mode(supabase:Client, user_id:str, mode_select:str, sub_mode_select:str=None):
-    MODE_SELCT=['study','work','entertainment']
-    SUB_MODE_SELECT=["school Study","interview study"]
+    MODE_SELECT = ['study', 'work', 'leisure']
+    SUB_MODE_SELECT = ["school", "interview"]  # Match your frontend values
 
     if not (check_if_user_exists(supabase, user_id)):
         raise ValueError(f"User {user_id} does not exist in the database.")
 
-    if mode_select.lower() not in MODE_SELCT:
-        raise ValueError(f"Invalid mode: {mode_select}. Valid modes are: {MODE_SELCT}")
+    if mode_select.lower() not in MODE_SELECT:
+        raise ValueError(f"Invalid mode: {mode_select}. Valid modes are: {MODE_SELECT}")
     
-    if mode_select.lower() =='study':
+    if mode_select.lower() == 'study' and sub_mode_select:
         if sub_mode_select.lower() not in SUB_MODE_SELECT:
             raise ValueError(f"Invalid sub mode: {sub_mode_select}. Valid sub modes are: {SUB_MODE_SELECT}")
     
-    data,error=supabase.from_('user_mode').insert({
-        'user_id':user_id,
-        'mode_select':mode_select,
-        'sub_mode_select':sub_mode_select
-    }).execute()
+    # Ensure the data is properly formatted for insert
+    insert_data = {
+        'id': user_id,
+        'mode_select': mode_select
+    }
+    
+    # Only add submode if it's study mode
+    if mode_select.lower() == 'study':
+        insert_data['study_submode_select'] = sub_mode_select
+    
+    print(f"Inserting user mode with data: {insert_data}")
+    
+    try:
+        # Use custom error handling
+        data, error = supabase.from_('user_mode').insert(insert_data).execute()
+        
+        if error:
+            print(f"Error adding user mode: {error}")
+            return error
+        else:
+            print(f"User mode added successfully: {data}")
+            return True
+    except Exception as e:
+        print(f"Exception adding user mode: {str(e)}")
+        return str(e)
 
-    if(data):
-        print(f"User mode added successfully: {data}")
-        return True
-    else:
-        print(f"Error adding user mode: {error}")
-        return error
-
-def update_user_mode(supabase:Client,user_id:str, mode_select:str, sub_mode_select:str=None):
-    MODE_SELCT=['study','work','leisure']
-    SUB_MODE_SELECT=["school study","interview study"]
+def update_user_mode(supabase:Client, user_id:str, mode_select:str, sub_mode_select:str=None):
+    MODE_SELECT = ['study', 'work', 'leisure']
+    SUB_MODE_SELECT = ["school", "interview"]  # Match your frontend values
 
     if not (check_if_user_exists(supabase, user_id)):
         raise ValueError(f"User {user_id} does not exist in the database.")
 
-    if mode_select.lower() not in MODE_SELCT:
-        raise ValueError(f"Invalid mode: {mode_select}. Valid modes are: {MODE_SELCT}")
+    if mode_select.lower() not in MODE_SELECT:
+        raise ValueError(f"Invalid mode: {mode_select}. Valid modes are: {MODE_SELECT}")
     
-    if mode_select.lower() =='Study':
-        if sub_mode_select not in SUB_MODE_SELECT:
+    if mode_select.lower() == 'study' and sub_mode_select:
+        if sub_mode_select.lower() not in SUB_MODE_SELECT:
             raise ValueError(f"Invalid sub mode: {sub_mode_select}. Valid sub modes are: {SUB_MODE_SELECT}")
 
-    data,error=supabase.from_("user_mode").update({
-        'mode_select':mode_select,
-        'sub_mode_select':sub_mode_select
-    }).execute()
-
-    if(data):
-        print(f"User mode updated successfully:{data}")
-        return True
+    # Prepare update data properly
+    update_data = {
+        'mode_select': mode_select
+    }
+    
+    # Handle study_submode_select explicitly
+    if mode_select.lower() == 'study':
+        update_data['study_submode_select'] = sub_mode_select
     else:
-        print(f"Error updating user mode: {error}")
-        return error
+        # For non-study modes, explicitly set submode to null
+        update_data['study_submode_select'] = None
+    
+    print(f"Updating user mode with data: {update_data}")
+    
+    try:
+        # Execute the update without assuming a specific return structure
+        response = supabase.from_("user_mode").update(update_data).eq('id', user_id).execute()
+        
+        # Check for error in response
+        if hasattr(response, 'error') and response.error:
+            print(f"Error updating user mode: {response.error}")
+            return response.error
+        else:
+            print(f"User mode updated successfully: {response.data if hasattr(response, 'data') else 'No data returned'}")
+            return True
+    except Exception as e:
+        print(f"Exception updating user mode: {str(e)}")
+        return str(e)
 
 
