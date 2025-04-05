@@ -2,11 +2,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
+from typing import List
 import datetime
 import uvicorn  
 from supabase import create_client
 from supabase_client import check_if_exists, retrieve_permission, add_website_to_db, SUPABASE_KEY, SUPABASE_URL
 import google.generativeai as genai
+from google import genai
 from dotenv import load_dotenv
 import os
 
@@ -32,20 +34,22 @@ class LinkData(BaseModel):
 class TextContent(BaseModel):
     text_content: str
 
-
 class SongTextContent(BaseModel):
-    text_content:str
+    song_text_content:str # thinking of doing a getting a mode
 
-class SongTitle(BaseModel):
+class SongLink(BaseModel):
     url:str
     title:str
     artist:str
-    album:str
+    #album:str // we can add this latter if needed
 
+class SongResponse(BaseModel):
+    all_songs:List[SongLink]
 
 # Store links in memory (in real app, use a database)
 received_links = []
 
+songs=[]
 @app.get("/")
 def read_root():
     return {"status": "online", "message": "FastAPI backend for Chrome extension"}
@@ -126,6 +130,46 @@ def process_text_content(text_content: TextContent):
         print(f'Error in processing text content: {e}')
         return False
 
+@app.post("/generate-songs")
+def process_song_link():
+    try:
+        GENAI_API_KEY=os.getenv("GEMINI_API_KEY_2")
+        client=genai.Client(api_key=GENAI_API_KEY)
+
+        if not(GENAI_API_KEY):
+            raise Exception("No API key found")
+        query=f"""
+           Recommend 5 songs related to "study mode" with a focus on concentration for interview study.
+           Only include songs with non-lyrics
+           Generate me a new response, don't repeat the previous songs.: 
+           Title - Artist - Spotify Link
+ 
+        """
+        #Note: Find a way to make it run when the person clicks
+
+        response=client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=query
+        )
+
+        #Psuedo code for reload
+        # IF reload == True
+        #Generate new songs and remove the previous songs in the list 
+        parts=response.text.strip().lower()
+
+        #Note: Find a way to make it run when the person clicks
+        
+        evaluation=parts=="true"
+
+        return bool(evaluation)
+    
+    except Exception as e:
+        print(f'Error in processing song link: {e}')
+        return False
+
+@app.get("/received-songs")
+def get_received_songs() -> SongResponse:
+    return SongResponse(all_songs=songs)
 
 @app.get("/links")
 def get_links():
