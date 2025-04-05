@@ -63,7 +63,7 @@ export default function Home() {
       }
       
     } catch (error) {
-      console.warn("Error: post request failed");
+      console.warn("Error: post request failed" + error);
     }
   };
 

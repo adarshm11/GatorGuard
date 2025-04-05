@@ -9,7 +9,7 @@ const Navbar = async () => {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const LinkClass = "rounded-md hover:bg-black hover:text-white py-2 px-3 transition-colors duration-300 ease-in-out"
+  const LinkClass = "rounded-md hover:text-white py-2 px-3 transition-colors duration-300 ease-in-out"
 
   return (
     <nav className="w-full flex items-center pt-4 rounded-lg shadow-2xl">
@@ -25,7 +25,7 @@ const Navbar = async () => {
         
           {!user ? (
             <Link href="/login">
-              <div className={"bg-blue-600 text-sm" + LinkClass}>
+              <div className={"text-sm" + LinkClass}>
                 Login
               </div>
             </Link>
