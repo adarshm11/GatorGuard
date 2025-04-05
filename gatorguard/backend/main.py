@@ -146,7 +146,7 @@ def process_song_link():
            Recommend 5 songs related to "study mode" with a focus on concentration for interview study.
            Only include songs with non-lyrics
            Generate me a new response, don't repeat the previous songs.: 
-           Title - Artist - Spotify Link
+           Title - Artist - time length- Spotify Link
  
         """
         #Note: Find a way to make it run when the person clicks
