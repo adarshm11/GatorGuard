@@ -11,7 +11,7 @@ def generate_response(user_text: str) -> str:
     genai.configure(api_key=os.getenv('GEMINI_SPEECH_API_KEY'))
     model = genai.GenerativeModel(model_name='gemini-2.0-flash')
 
-    query = f'Reply to this request as though it is a friendly conversation: {user_text}. Do not include any emojis in your response.'
+    query = f'''Reply to this request: {user_text}. Do not include any emojis in your response.'''
     response = model.generate_content(query)
     return response.text
 
@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
     try:
         text = recognizer.recognize_google(audio)
-        print("Processing...")
+        print(f"Processing text: {text}")
         response = generate_response(text)
         text_to_speech(response)
         print(response)
