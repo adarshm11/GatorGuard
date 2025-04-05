@@ -1,6 +1,7 @@
 from supabase import Client
 import os
 from dotenv import load_dotenv
+from fastapi import HTTPException
 
 load_dotenv()
 SUPABASE_URL = os.getenv('SUPABASE_URL')
@@ -31,7 +32,9 @@ def add_website_to_db(supabase: Client, website_url: str, website_title: str, ti
         'work_allowed': work_allowed,
         'leisure_allowed': leisure_allowed,
     }).execute()
-    return error is None and bool(data)
+    if error:
+        raise HTTPException(status_code=500, detail='Error accessing Supabase DB')
+    return True
 ''' DOES NOT WORK:
 
 def clear_db():
