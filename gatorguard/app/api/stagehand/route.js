@@ -89,6 +89,50 @@ async function sendTextContentToBackend(textContent) {
   }
 }
 
+async function addWebsiteToDB(url, title, timestamp, allowed) {
+  try {
+    console.log("Sending data to Python backend...");
+    const backendResponse = await fetch("http://127.0.0.1:8000/add-website-to-db", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        url,
+        title,
+        timestamp, // ADD MODE LATER
+        study_allowed: allowed,
+      }),
+    });
+    // format of backendResponse: 
+    /* 
+    success: true/false,
+    errorMessage?
+    */
+    if (backendResponse.ok) {
+      const data = await backendResponse.json();
+      console.log("Python backend response:", data);
+      return JSON.stringify({
+        success: true
+      })
+    } else {
+      console.warn(`Python backend returned status ${backendResponse.status}`);
+      return JSON.stringify({
+        success: false,
+        errorMessage: backendResponse.errorMessage,
+      })
+    }
+  } catch (backendError) {
+    console.warn(
+      "Failed to communicate with Python backend:",
+      backendError.message,
+    );
+    return JSON.stringify({
+      success: false,
+    })
+  }
+}
+
 export async function POST(req) {
   let stagehand = null;
 
@@ -101,18 +145,35 @@ export async function POST(req) {
 
     const { url, title, timestamp } = await req.json();
 
-    const titleResult = await sendTitleToBackend(url, title, timestamp);
-
-    console.log(`Processing request for URL: ${url}`);
-    console.log(`Title: ${title || "Not provided"}`);
-    console.log(`Timestamp: ${timestamp}`);
-
     // Validate request parameters
     if (!url) {
       return new Response(JSON.stringify({ error: "URL is required" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       });
+    }
+    
+    console.log(`Processing request for URL: ${url}`);
+    console.log(`Title: ${title || "Not provided"}`);
+    console.log(`Timestamp: ${timestamp}`);
+
+    const titleResult = await sendTitleToBackend(url, title, timestamp);
+
+    if (!titleResult) { // title was already determined to be irrelevant -> short-circuit evaluation
+      await addWebsiteToDB(url, title, timestamp, false);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          allowed: false,
+          url,
+          title: title || url,
+          timestamp,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
     // Check for required API keys
@@ -184,6 +245,17 @@ export async function POST(req) {
     const textContentResult = await sendTextContentToBackend(textContent);
 
     const finalAllowed = titleResult && textContentResult;
+
+    const dbResponse = await addWebsiteToDB(url, title, timestamp, finalAllowed);
+    /* 
+    format of dbResponse:
+    success: t/f,
+    errorMessage: ?
+    */
+    
+    if (!dbResponse.success) {
+      console.log("Error occurred while adding to DB: ", dbResponse.errorMessage);
+    }
     
     console.log("Closing Stagehand...");
     await stagehand.close();
