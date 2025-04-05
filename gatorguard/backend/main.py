@@ -40,6 +40,16 @@ class DBEntry(BaseModel):
     work_allowed: Optional[bool] = True
     leisure_allowed: Optional[bool] = True
 
+
+class SongTextContent(BaseModel):
+    text_content:str
+
+class SongTitle(BaseModel):
+    url:str
+    title:str
+    artist:str
+    album:str
+
 # Store links in memory (in real app, use a database)
 received_links = []
 
