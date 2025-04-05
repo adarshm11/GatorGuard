@@ -1,10 +1,11 @@
+import Popup from "./pages/Popup";
+
 function App() {
-  
   return (
-    <>
-      <h1 className="text-bold text-red-500">Hello Vite!</h1>
-    </>
-  )
+    <div className="bg-gray-100 min-h-screen flex items-center justify-center">
+      <Popup />
+    </div>
+  );
 }
 
-export default App
+export default App;

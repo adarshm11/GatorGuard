@@ -1,12 +1,18 @@
 {
-    "manifest_version": 3,
-    "name": "GatorGuard",
-    "version": "1.0.0",
-    "description": "SF Hacks 2025",
-    "action": {
-      "default_popup": "index.html"
-    },
-    "permissions": []
-    
+  "manifest_version": 3,
+  "name": "GatorGuard",
+  "version": "1.0.0",
+  "description": "SF Hacks 2025",
+  "action": {
+    "default_popup": "index.html"
+  },
+  "permissions": ["activeTab", "tabs", "storage", "notifications"],
+  "host_permissions": [
+    "<all_urls>",
+    "http://localhost:8000/*",
+    "http://localhost:3000/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
   }
-  
+}
