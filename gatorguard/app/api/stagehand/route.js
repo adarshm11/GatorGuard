@@ -1,137 +1,10 @@
 import { Stagehand } from "@browserbasehq/stagehand";
-
-async function sendTitleToBackend(url, title, timestamp) {
-  try {
-    console.log("Sending data to Python backend...");
-    const backendResponse = await fetch("http://127.0.0.1:8000/received-link", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        url,
-        title,
-        timestamp,
-      }),
-    });
-
-    if (backendResponse.ok) {
-      const data = await backendResponse.json();
-      console.log("Python backend response:", data);
-      return data?.allowed === true;
-    } else {
-      console.warn(`Python backend returned status ${backendResponse.status}`);
-      return false;
-    }
-  } catch (backendError) {
-    console.warn(
-      "Failed to communicate with Python backend:",
-      backendError.message
-    );
-    return false;
-  }
-}
-
-async function sendTextContentToBackend(textContent) {
-  try {
-    // Extract the message text if textContent is an object with a message property
-    let contentToSend = textContent;
-
-    if (typeof textContent === "object" && textContent !== null) {
-      if (textContent.message) {
-        contentToSend = textContent.message;
-      } else {
-        // Convert the object to a formatted string if there's no message property
-        contentToSend = JSON.stringify(textContent, null, 2);
-      }
-    }
-
-    console.log("Sending data to Python backend...");
-    console.log("Text content type:", typeof contentToSend);
-    console.log(
-      "Text content preview:",
-      contentToSend.substring(0, 100) + "..."
-    );
-
-    const backendResponse = await fetch(
-      "http://127.0.0.1:8000/received-text-content",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text_content: contentToSend,
-        }),
-      }
-    );
-
-    if (backendResponse.ok) {
-      const data = await backendResponse.json();
-      console.log("Python backend response:", data);
-      return data?.allowed === true;
-    } else {
-      console.warn(`Python backend returned status ${backendResponse.status}`);
-      try {
-        const errorText = await backendResponse.text();
-        console.warn("Error details:", errorText);
-      } catch (e) {
-        console.warn("Could not read error details", e);
-      }
-      return false;
-    }
-  } catch (backendError) {
-    console.warn(
-      "Failed to communicate with Python backend:",
-      backendError.message
-    );
-    return false;
-  }
-}
-
-async function addWebsiteToDB(url, title, timestamp, allowed) {
-  try {
-    console.log("Sending data to Python backend...");
-    const backendResponse = await fetch("http://127.0.0.1:8000/add-website-to-db", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        url,
-        title,
-        timestamp, // ADD MODE LATER
-        study_allowed: allowed,
-      }),
-    });
-    // format of backendResponse: 
-    /* 
-    success: true/false,
-    errorMessage?
-    */
-    if (backendResponse.ok) {
-      const data = await backendResponse.json();
-      console.log("Python backend response:", data);
-      return JSON.stringify({
-        success: true
-      })
-    } else {
-      console.warn(`Python backend returned status ${backendResponse.status}`);
-      return JSON.stringify({
-        success: false,
-        errorMessage: backendResponse.errorMessage,
-      })
-    }
-  } catch (backendError) {
-    console.warn(
-      "Failed to communicate with Python backend:",
-      backendError.message,
-    );
-    return JSON.stringify({
-      success: false,
-    })
-  }
-}
+import {
+  sendTitleToBackend,
+  sendTextContentToBackend,
+  addWebsiteToDB,
+  checkWebsiteInDB,
+} from "../utils/backendApi";
 
 export async function POST(req) {
   let stagehand = null;
@@ -143,7 +16,7 @@ export async function POST(req) {
     globalThis.__bundlerPathsOverrides["thread-stream-worker"] =
       "./node_modules/thread-stream/lib/worker.js";
 
-    const { url, title, timestamp } = await req.json();
+    const { url, title, timestamp, mode } = await req.json();
 
     // Validate request parameters
     if (!url) {
@@ -152,15 +25,39 @@ export async function POST(req) {
         headers: { "Content-Type": "application/json" },
       });
     }
-    
+
     console.log(`Processing request for URL: ${url}`);
     console.log(`Title: ${title || "Not provided"}`);
     console.log(`Timestamp: ${timestamp}`);
+    console.log(`Current mode: ${mode}`);
 
-    const titleResult = await sendTitleToBackend(url, title, timestamp);
+    // Check if website exists in database
+    const checkData = await checkWebsiteInDB(url);
 
-    if (!titleResult) { // title was already determined to be irrelevant -> short-circuit evaluation
-      await addWebsiteToDB(url, title, timestamp, false);
+    if (checkData.exists) {
+      // short circuit evaluation, if website exists in database, return the stored permission
+      console.log("Website found in database, returning stored permission");
+      return new Response(
+        JSON.stringify({
+          success: true,
+          allowed: checkData[`${mode}_allowed`],
+          url,
+          title: title || url,
+          timestamp,
+          fromDatabase: true,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const titleResult = await sendTitleToBackend(url, title, timestamp, mode);
+
+    if (!titleResult) {
+      // title was already determined to be irrelevant -> short-circuit evaluation
+      await addWebsiteToDB(url, title, timestamp, false, mode);
       return new Response(
         JSON.stringify({
           success: true,
@@ -177,10 +74,10 @@ export async function POST(req) {
     }
 
     // Check for required API keys
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.GEMINI_API_KEY) {
       return new Response(
         JSON.stringify({
-          error: "OPENAI_API_KEY is not defined in your environment variables",
+          error: "GEMINI_API_KEY is not defined in your environment variables",
         }),
         {
           status: 500,
@@ -202,18 +99,18 @@ export async function POST(req) {
       );
     }
 
-    console.log("Creating Stagehand instance...");
+    console.log("Creating Stagehand instance with Gemini...");
     stagehand = new Stagehand({
       env: "LOCAL",
-      modelName: "gpt-4o-mini",
+      modelName: "gemini-2.0-flash",
       modelClientOptions: {
-        apiKey: process.env.OPENAI_API_KEY,
+        apiKey: process.env.GEMINI_API_KEY,
       },
     });
 
-    console.log("Initializing Stagehand...");
+    console.log("Initializing Stagehand with Gemini...");
     await stagehand.init();
-    console.log("Stagehand initialized successfully");
+    console.log("Gemini Stagehand initialized successfully");
 
     const page = stagehand.page;
     console.log(`Navigating to ${url}...`);
@@ -231,7 +128,7 @@ export async function POST(req) {
     });
 
     const agentQuery = `
-        Extract the following and terminate as soon as you can, no need to click around the page:
+        Extract the following and terminate as soon as you can, no need to scroll around the page:
           - Title
           - Main body text
           - Structured data          
@@ -246,17 +143,21 @@ export async function POST(req) {
 
     const finalAllowed = titleResult && textContentResult;
 
-    const dbResponse = await addWebsiteToDB(url, title, timestamp, finalAllowed);
-    /* 
-    format of dbResponse:
-    success: t/f,
-    errorMessage: ?
-    */
-    
+    const dbResponse = await addWebsiteToDB(
+      url,
+      title,
+      timestamp,
+      finalAllowed,
+      mode
+    );
+
     if (!dbResponse.success) {
-      console.log("Error occurred while adding to DB: ", dbResponse.errorMessage);
+      console.log(
+        "Error occurred while adding to DB:",
+        dbResponse.errorMessage
+      );
     }
-    
+
     console.log("Closing Stagehand...");
     await stagehand.close();
     stagehand = null;

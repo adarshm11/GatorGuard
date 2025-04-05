@@ -22,19 +22,48 @@ def retrieve_permission(supabase: Client, website_url: str, browser_mode: str) -
 
 def add_website_to_db(supabase: Client, website_url: str, website_title: str, timestamp: str = None, 
                       study_allowed: bool = False, work_allowed: bool = False, leisure_allowed: bool = True):
-    if check_if_exists(supabase, website_url):
-        return False
-    data, error = supabase.from_('websites').insert({
-        'url': website_url,
-        'title': website_title,
-        'timestamp': timestamp,
-        'study_allowed': study_allowed,
-        'work_allowed': work_allowed,
-        'leisure_allowed': leisure_allowed,
-    }).execute()
-    if error:
-        raise HTTPException(status_code=500, detail='Error accessing Supabase DB')
-    return True
+    try:
+        # Check if website already exists
+        if check_if_exists(supabase, website_url):
+            print(f"Website already exists in database: {website_url}")
+            return {"success": True, "duplicate": True}
+        
+        # Prepare data for insertion
+        website_data = {
+            'url': website_url,
+            'title': website_title,
+            'timestamp': timestamp,
+            'study_allowed': study_allowed,
+            'work_allowed': work_allowed,
+            'leisure_allowed': leisure_allowed,
+        }
+        
+        # Log insertion attempt
+        print(f"Attempting to insert website: {website_url}")
+        
+        # Execute insert operation
+        response = supabase.from_('websites').insert(website_data).execute()
+        
+        # Check for errors in the response
+        if hasattr(response, 'error') and response.error:
+            error_msg = str(response.error)
+            print(f"Supabase error during insertion: {error_msg}")
+            
+            # Check if error is about unique constraint (website already exists)
+            if "violates unique constraint" in error_msg or "duplicate key" in error_msg:
+                print("Duplicate entry detected from error message")
+                return {"success": True, "duplicate": True}
+            
+            return {"success": False, "error": error_msg}
+        
+        print(f"Successfully inserted website: {website_url}")
+        return {"success": True, "duplicate": False}
+        
+    except Exception as e:
+        print(f"Exception during website insertion: {str(e)}")
+        return {"success": False, "error": str(e)}
+    
+    
 ''' DOES NOT WORK:
 
 def clear_db():
@@ -42,4 +71,3 @@ def clear_db():
     return bool(response.data)
 '''
 
-    

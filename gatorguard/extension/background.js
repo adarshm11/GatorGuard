@@ -17,7 +17,6 @@ function checkAuthentication() {
         "Authentication status:",
         isAuthenticated ? "Logged in" : "Not logged in"
       );
-
     })
     .catch((error) => {
       console.error("Auth check failed:", error);
@@ -44,7 +43,8 @@ function processTab(tab) {
     console.log(`Processing potential tab: ${tab.url}`);
     console.log(`Hostname: ${urlObj.hostname}`);
 
-    const isLocalhost3000 = urlObj.hostname === "localhost" && urlObj.port === "3000";
+    const isLocalhost3000 =
+      urlObj.hostname === "localhost" && urlObj.port === "3000";
 
     if (
       !tab.url ||
@@ -106,6 +106,9 @@ function storeLink(url, title) {
 
 // Send to backend and handle response
 function sendLinkToJSBackend(url, title) {
+  // Store the mode in a variable so you can use it in the response handling
+  const currentMode = "work"; // This could be dynamic in the future
+
   fetch("http://localhost:3000/api/stagehand", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -113,23 +116,26 @@ function sendLinkToJSBackend(url, title) {
       url: url,
       title: title || url,
       timestamp: new Date().toISOString(),
+      mode: currentMode,
     }),
   })
     .then((response) => response.json())
     .then((data) => {
       console.log("Backend response:", data);
-      
+
       // Handle the allowed status
       if (data.allowed === true) {
-        console.log("Website is allowed for studying");
+        console.log(`Website is allowed for ${currentMode} mode`);
       } else {
-        console.log("Website is NOT allowed for studying");        
-        // Optional: Show a notification
+        console.log(`Website is NOT allowed for ${currentMode} mode`);
+        // Show a notification with the current mode
         chrome.notifications.create({
           type: "basic",
           iconUrl: "sf_hacks_sfsu_logo.jpg",
-          title: "Study Focus Mode",
-          message: "This website isn't ideal for studying. Consider switching to something more productive."
+          title: `${
+            currentMode.charAt(0).toUpperCase() + currentMode.slice(1)
+          } Focus Mode`,
+          message: `This website isn't ideal for ${currentMode} mode. Consider switching to something more productive.`,
         });
       }
     })
