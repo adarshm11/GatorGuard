@@ -23,4 +23,5 @@ dist-ssr
 *.sln
 *.sw?
 
-build
+/backend/gatorguard-venv/
+/backend/.env/

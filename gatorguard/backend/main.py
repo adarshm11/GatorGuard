@@ -5,7 +5,7 @@ from typing import Optional, List
 import datetime
 import uvicorn  
 from supabase import create_client
-from supabase_client import check_if_exists, retrieve_permission, add_website_to_db, SUPABASE_KEY, SUPABASE_URL
+from supabase_client import check_if_exists, retrieve_permission, add_website_to_db, SUPABASE_KEY, SUPABASE_URL, add_user_mode,update_user_mode
 import google.generativeai as genai
 from dotenv import load_dotenv
 import os
@@ -84,6 +84,7 @@ def receive_link(link_data: LinkData):
     '''
     { allowed: true }
     { allowed: false }
+    { not exist in db -> schema TBD }
     '''
 
 def process_link(link_data: LinkData):
@@ -108,6 +109,7 @@ def receive_text_content(text_content: TextContent):
 def process_text_content(text_content: TextContent):
     try:
         print("Processing text content...")
+        client = create_client(supabase_url=SUPABASE_URL, supabase_key=SUPABASE_KEY)      
         api_key = os.getenv('GEMINI_API_KEY')
         genai.configure(api_key=api_key)  
         gemini = genai.GenerativeModel('gemini-2.0-flash')
@@ -157,9 +159,8 @@ def process_song_link():
         evaluation=parts=="true"
 
         return bool(evaluation)
-    
     except Exception as e:
-        print(f'Error in processing song link: {e}')
+        print(f'Error in processing text content: {e}')
         return False
 
 @app.get("/received-songs")
