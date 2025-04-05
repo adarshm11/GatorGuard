@@ -25,8 +25,6 @@ export async function POST(req) {
     timestamp = requestData.timestamp;
     mode = requestData.mode;
 
-    const titleResult = await sendTitleToBackend(url, title, timestamp);
-
     console.log(`Processing request for URL: ${url}`);
     console.log(`Title: ${title || "Not provided"}`);
     console.log(`Timestamp: ${timestamp}`);
