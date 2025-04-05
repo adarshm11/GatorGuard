@@ -9,26 +9,29 @@ const Navbar = async () => {
     data: { user },
   } = await supabase.auth.getUser();
 
-  return (
-    <nav className="border-b bg-background w-full flex items-center">
-      <div className="flex w-full items-center justify-between my-4">
-        <Link className="font-bold" href="/">
-          Home
-        </Link>
+  const LinkClass = "rounded-md hover:text-white py-2 px-3 transition-colors duration-300 ease-in-out"
 
-        <div className="flex items-center gap-x-5">
-          <Link href="/private">Private</Link>
+  return (
+    <nav className="w-full flex items-center pt-4 rounded-lg shadow-2xl">
+      <div className="flex w-full items-center justify-between px-8 py-4">
+        <div className="flex-shrink-0">
+          <Link className={"font-bold " + LinkClass} href="/">
+            Home
+          </Link>
         </div>
-        <div className="flex items-center gap-x-5">
+
+        <div className="flex items-center gap-x-6">
+          <Link className={LinkClass} href="/private">Private</Link>
+        
           {!user ? (
             <Link href="/login">
-              <div className="bg-blue-600 text-white text-sm px-4 py-2 rounded-sm">
+              <div className={"text-sm" + LinkClass}>
                 Login
               </div>
             </Link>
           ) : (
             <>
-              <div className="flex items-cetner gap-x-2 text-sm">
+              <div className="flex items-center gap-x-2 text-sm">
                 {user?.email}
               </div>
               <Logout />

@@ -12,7 +12,7 @@ const AuthButton = ({
       disabled={loading}
       type="submit"
       className={`cursor-pointer ${
-        loading ? "bg-gray-600" : "bg-blue-600"
+        loading ? "bg-yellow-700" : "bg-yellow-600"
       } rounded-md w-full px-12 py-3 text-sm font-medium text-white`}
     >
       {loading ? "Loading..." : type}

@@ -1,96 +1,16 @@
 import { Stagehand } from "@browserbasehq/stagehand";
+import {
+  sendTitleToBackend,
+  sendTextContentToBackend,
+  addWebsiteToDB,
+  checkWebsiteInDB,
+} from "../utils/backendApi";
 
-async function sendTitleToBackend(url, title, timestamp) {
-  try {
-    console.log("Sending data to Python backend...");
-    const backendResponse = await fetch("http://127.0.0.1:8000/received-link", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        url,
-        title,
-        timestamp,
-      }),
-    });
-
-    if (backendResponse.ok) {
-      const data = await backendResponse.json();
-      console.log("Python backend response:", data);
-      return data?.allowed === true;
-    } else {
-      console.warn(`Python backend returned status ${backendResponse.status}`);
-      return false;
-    }
-  } catch (backendError) {
-    console.warn(
-      "Failed to communicate with Python backend:",
-      backendError.message
-    );
-    return false;
-  }
-}
-
-async function sendTextContentToBackend(textContent) {
-  try {
-    // Extract the message text if textContent is an object with a message property
-    let contentToSend = textContent;
-
-    if (typeof textContent === "object" && textContent !== null) {
-      if (textContent.message) {
-        contentToSend = textContent.message;
-      } else {
-        // Convert the object to a formatted string if there's no message property
-        contentToSend = JSON.stringify(textContent, null, 2);
-      }
-    }
-
-    console.log("Sending data to Python backend...");
-    console.log("Text content type:", typeof contentToSend);
-    console.log(
-      "Text content preview:",
-      contentToSend.substring(0, 100) + "..."
-    );
-
-    const backendResponse = await fetch(
-      "http://127.0.0.1:8000/received-text-content",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text_content: contentToSend,
-        }),
-      }
-    );
-
-    if (backendResponse.ok) {
-      const data = await backendResponse.json();
-      console.log("Python backend response:", data);
-      return data?.allowed === true;
-    } else {
-      console.warn(`Python backend returned status ${backendResponse.status}`);
-      try {
-        const errorText = await backendResponse.text();
-        console.warn("Error details:", errorText);
-      } catch (e) {
-        console.warn("Could not read error details", e);
-      }
-      return false;
-    }
-  } catch (backendError) {
-    console.warn(
-      "Failed to communicate with Python backend:",
-      backendError.message
-    );
-    return false;
-  }
-}
 
 export async function POST(req) {
   let stagehand = null;
+  let url, title, timestamp, mode;
+  let addedToDB = false;
 
   try {
     if (!globalThis.__bundlerPathsOverrides) {
@@ -99,7 +19,11 @@ export async function POST(req) {
     globalThis.__bundlerPathsOverrides["thread-stream-worker"] =
       "./node_modules/thread-stream/lib/worker.js";
 
-    const { url, title, timestamp } = await req.json();
+    const requestData = await req.json();
+    url = requestData.url;
+    title = requestData.title;
+    timestamp = requestData.timestamp;
+    mode = requestData.mode;
 
     const titleResult = await sendTitleToBackend(url, title, timestamp);
 
@@ -115,11 +39,58 @@ export async function POST(req) {
       });
     }
 
-    // Check for required API keys
-    if (!process.env.OPENAI_API_KEY) {
+    console.log(`Processing request for URL: ${url}`);
+    console.log(`Title: ${title || "Not provided"}`);
+    console.log(`Timestamp: ${timestamp}`);
+    console.log(`Current mode: ${mode}`);
+
+    // Check if website exists in database
+    const checkData = await checkWebsiteInDB(url);
+
+    if (checkData.exists) {
+      // short circuit evaluation, if website exists in database, return the stored permission
+      console.log("Website found in database, returning stored permission");
       return new Response(
         JSON.stringify({
-          error: "OPENAI_API_KEY is not defined in your environment variables",
+          success: true,
+          allowed: checkData[`${mode}_allowed`],
+          url,
+          title: title || url,
+          timestamp,
+          fromDatabase: true,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const titleResult = await sendTitleToBackend(url, title, timestamp, mode);
+
+    if (!titleResult) {
+      // title was already determined to be irrelevant -> short-circuit evaluation
+      await addWebsiteToDB(url, title, timestamp, false, mode);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          allowed: false,
+          url,
+          title: title || url,
+          timestamp,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Check for required API keys
+    if (!process.env.GEMINI_API_KEY) {
+      return new Response(
+        JSON.stringify({
+          error: "GEMINI_API_KEY is not defined in your environment variables",
         }),
         {
           status: 500,
@@ -141,18 +112,18 @@ export async function POST(req) {
       );
     }
 
-    console.log("Creating Stagehand instance...");
+    console.log("Creating Stagehand instance with Gemini...");
     stagehand = new Stagehand({
       env: "LOCAL",
-      modelName: "gpt-4o-mini",
+      modelName: "gemini-2.0-flash",
       modelClientOptions: {
-        apiKey: process.env.OPENAI_API_KEY,
+        apiKey: process.env.GEMINI_API_KEY,
       },
     });
 
-    console.log("Initializing Stagehand...");
+    console.log("Initializing Stagehand with Gemini...");
     await stagehand.init();
-    console.log("Stagehand initialized successfully");
+    console.log("Gemini Stagehand initialized successfully");
 
     const page = stagehand.page;
     console.log(`Navigating to ${url}...`);
@@ -170,7 +141,7 @@ export async function POST(req) {
     });
 
     const agentQuery = `
-        Extract the following and terminate as soon as you can, no need to click around the page:
+        No need to scroll around the page and terminate as soon as you can. Extract the following from the webpage:
           - Title
           - Main body text
           - Structured data          
@@ -184,7 +155,24 @@ export async function POST(req) {
     const textContentResult = await sendTextContentToBackend(textContent);
 
     const finalAllowed = titleResult && textContentResult;
-    
+
+    const dbResponse = await addWebsiteToDB(
+      url,
+      title,
+      timestamp,
+      finalAllowed,
+      mode
+    );
+
+    if (!dbResponse.success) {
+      console.log(
+        "Error occurred while adding to DB:",
+        dbResponse.errorMessage
+      );
+    } else {
+      addedToDB = true;
+    }
+
     console.log("Closing Stagehand...");
     await stagehand.close();
     stagehand = null;
@@ -218,10 +206,41 @@ export async function POST(req) {
       }
     }
 
+    // If we haven't added to DB yet, do it now with a default value (false for safety)
+    if (url && !addedToDB) {
+      try {
+        console.log("Adding website to DB despite Stagehand failure...");
+        const dbResponse = await addWebsiteToDB(
+          url,
+          title,
+          timestamp,
+          false,
+          mode
+        );
+
+        if (dbResponse.success) {
+          console.log("Successfully added website to DB as fallback");
+          addedToDB = true;
+        } else {
+          console.log(
+            "Failed to add website to DB as fallback:",
+            dbResponse.errorMessage
+          );
+        }
+      } catch (dbError) {
+        console.error("Error adding website to DB as fallback:", dbError);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: false,
         error: error.message,
+        addedToDB: addedToDB, // Let the client know if we added to DB anyway
+        allowed: false, // Default to false for safety if Stagehand failed
+        url,
+        title: title || url,
+        timestamp,
         stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
       }),
       {
