@@ -32,6 +32,17 @@ class LinkData(BaseModel):
 class TextContent(BaseModel):
     text_content: str
 
+
+class SongTextContent(BaseModel):
+    text_content:str
+
+class SongTitle(BaseModel):
+    url:str
+    title:str
+    artist:str
+    album:str
+
+
 # Store links in memory (in real app, use a database)
 received_links = []
 
