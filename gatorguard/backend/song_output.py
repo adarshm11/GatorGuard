@@ -6,8 +6,10 @@ from typing import List
 from enum import Enum
 from fastapi import APIRouter
 from supabase import create_client
+from utils.spotify_helper import search_spotify_song
 from supabase_client import check_if_exists, retrieve_permission, add_website_to_db, SUPABASE_KEY, SUPABASE_URL, add_user_mode,update_user_mode
 import google.generativeai as genai
+import traceback
 
 from dotenv import load_dotenv
 import os
@@ -21,14 +23,15 @@ class UserMode(BaseModel):
     sub_mode_select:Optional[str]=None
     lyric_status:Optional[bool]=True
 
-class SongLink(BaseModel):
+class SongInfo(BaseModel):
     url:str
     title:str
     artist:str
     #album:str // we can add this latter if needed
+    song_length:Optional[float]=None
 
 class SongResponse(BaseModel):
-    all_songs:List[SongLink]
+    all_songs:List[SongInfo]
 
 @router.get("/testing")
 def test():
@@ -50,7 +53,7 @@ def process_song_link(mode_status:UserMode):
             Recommend 5 songs related to {mode_status.mode_select} with a focus on concentration for {mode_status.sub_mode_select}.
             Only include songs with {mode_status.lyric_status}
             Generate me a new response, don't repeat the previous songs.: 
-            Title - Artist - Spotify Link
+            Title - Artist - length of song - Spotify Link
             """
             if mode_status.lyric_status:
                 query += "\nSongs must have lyrics."
@@ -61,12 +64,26 @@ def process_song_link(mode_status:UserMode):
             gemini = genai.GenerativeModel('gemini-2.0-flash')
             response = gemini.generate_content(query)
 
-            print(response.text)
-            parts=response.text.strip().lower()
+            print(f" this is line 69:{response.text.replace('*','')}")
 
-            #Note: Find a way to make it run when the person clicks
-            evaluation=parts=="true"
-            return bool(evaluation)
+            song_list=[]
+
+            for line in response.text.replace("*",'').strip().splitlines():
+                part=[part.strip() for part in line.split('-')]
+                if len(part) < 2:
+                    continue
+
+                title=part[0]
+                artist=part[1]
+
+                search_song=search_spotify_song(title,artist)
+                if search_song:
+                    print(search_song)
+                    song_list.append(search_song)
+                else:
+                    print(f"Song not found: {title.strip()} by {artist.strip()}")
+                
+            return song_list
 
         else:
             song_type="lyrics"
@@ -78,7 +95,7 @@ def process_song_link(mode_status:UserMode):
             query=f"""
             Recommend 5 songs related to {mode_status.mode_select}
             Only include songs with {song_type} 
-            Title - Artist - Spotify Link
+            Title - Artist -length of the song- Spotify Link
     
             """
         #Note: Find a way to make it run when the person clicks
@@ -92,24 +109,33 @@ def process_song_link(mode_status:UserMode):
             gemini = genai.GenerativeModel('gemini-2.0-flash')
             response = gemini.generate_content(query)
 
-            print(response.text)
-            parts=response.text.strip().lower()
+            print(response.text.replace('*',''))
+            song_list=[]
+            for line in response.text.strip().replace('*','').splitlines():
+                part=[part.strip() for part in line.split('-')]
+                if len(part) < 2:
+                    continue
 
-            #Note: Find a way to make it run when the person clicks
-            evaluation=parts=="true"
-            return bool(evaluation)
+                title=part[0]
+                artist=part[1]
+
+                search_song=search_spotify_song(title,artist)
+                if search_song:
+                    print(search_song)
+                    song_list.append(search_song)
+                else:
+                    print(f"Song not found: {title.strip()} by {artist.strip()}")
+                
+            return song_list
+            
     
     except Exception as e:
         print(f'Error in processing song link: {e}')
+        traceback.print_exc()
         return {"error": str(e)}
-
-
-@router.put("/reload-songs")
-def reload_songs():
-    pass
 
 
 @router.get("/received-songs")
 def get_received_songs() -> SongResponse:
-    return SongResponse(all_songs=songs)
+    pass
 
