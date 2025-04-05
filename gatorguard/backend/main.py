@@ -131,10 +131,11 @@ def process_text_content(text_content: TextContent):
 def process_song_link():
     try:
         GENAI_API_KEY=os.getenv("GEMINI_API_KEY_2")
-        client=genai.Client(api_key=GENAI_API_KEY)
-
         if not(GENAI_API_KEY):
-            raise Exception("No API key found")
+            raise HTTPException(status_code=400, detail="No API key found")
+        genai.configure(api_key=GENAI_API_KEY)
+        client=genai.GenerativeModel('gemini-2.0-flash')
+
         query=f"""
            Recommend 5 songs related to "study mode" with a focus on concentration for interview study.
            Only include songs with non-lyrics
@@ -144,10 +145,7 @@ def process_song_link():
         """
         #Note: Find a way to make it run when the person clicks
 
-        response=client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=query
-        )
+        response=client.generate_content(query)
 
         #Psuedo code for reload
         # IF reload == True
