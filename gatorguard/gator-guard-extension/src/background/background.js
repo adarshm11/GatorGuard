@@ -115,8 +115,8 @@ function checkAuthentication() {
     });
 }
 
-// checkAuthentication();
-// setInterval(checkAuthentication, 5 * 60 * 1000);
+checkAuthentication();
+setInterval(checkAuthentication, 5 * 60 * 1000);
 
 function processTab(tab) {
   try {
