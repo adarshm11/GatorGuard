@@ -94,13 +94,15 @@ def add_user_mode(supabase:Client, user_id:str, mode_select:str, sub_mode_select
     
     try:
         # Use custom error handling
-        data, error = supabase.from_('user_mode').insert(insert_data).execute()
+        response = supabase.from_('user_mode').insert(insert_data).execute()
         
-        if error:
-            print(f"Error adding user mode: {error}")
-            return error
+        if hasattr(response, 'error') and response.error:
+            error_msg = str(response.error)
+            print(f"Supabase error during insertion: {error_msg}")
+            return {"success": False, "error": error_msg}
+            
         else:
-            print(f"User mode added successfully: {data}")
+            print(f"User mode added successfully: {response['data']}")
             return True
     except Exception as e:
         print(f"Exception adding user mode: {str(e)}")

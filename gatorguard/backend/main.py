@@ -18,7 +18,7 @@ app.include_router(router)
 # Configure CORS to allow requests from your Chrome extension
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"], 
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:8001", "http://127.0.0.1:8001"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -116,14 +116,14 @@ def process_text_content(text_content: TextContent):
         client = create_client(supabase_url=SUPABASE_URL, supabase_key=SUPABASE_KEY)      
         api_key = os.getenv('GEMINI_API_KEY')
         genai.configure(api_key=api_key)  
-        gemini = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-2.0-flash')
         query = f'''
             A browser user is currently trying to study. They just visited a website with this content: {text_content.text_content}. 
             Do you think this website is appropriate for a study environment? Ignore whether or not it is allowed 
             for mature audiences, simply tell me if this website is related to studying material or not with a True/False answer.
         '''
         print("Sending query to Gemini model...")
-        response = gemini.generate_content(query)
+        response = model.generate_content(query)
         print(f"Gemini response: {response.text}")  # Log the response for debugging
         response_text = response.text.strip().lower()
         print(f"Processed response text: {response_text}")
@@ -250,7 +250,7 @@ def add_db_entry(db_entry: DBEntry):
         }
     
 @app.post("/received-mode/")
-def receive_browsing_mode(mode_data: ModeData):
+async def receive_browsing_mode(mode_data: ModeData):
     try:
         print(f'Received mode: {mode_data.mode}, Submode: {mode_data.submode}, User ID: {mode_data.user_id}')
         
@@ -321,7 +321,7 @@ def evaluate_website_for_mode(url, title, mode):
             return False
             
         genai.configure(api_key=api_key)
-        gemini = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-2.0-flash')
         
         query = f'''
             A browser user is currently in {mode} mode. They just visited a website with this url: {url} and this title:
@@ -329,7 +329,7 @@ def evaluate_website_for_mode(url, title, mode):
             for mature audiences, simply tell me if this website is related to {mode} material or not with a True/False answer.
         '''
         
-        response = gemini.generate_content(query)
+        response = model.generate_content(query)
         response_text = response.text.strip().lower()
         print(f"Gemini evaluation for {mode} mode: {response_text}")
         
@@ -368,4 +368,4 @@ def get_links():
     return {"links": received_links}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run('main:app', host="0.0.0.0", port=8000, reload=True)

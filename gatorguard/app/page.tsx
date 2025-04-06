@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "./utils/supabase/client";
+// @ts-ignore
+import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 
 type ModeValue = "study" | "work" | "leisure" | null;
 type SubmodeValue = "interview" | "school" | null;
@@ -91,6 +93,94 @@ export default function Home() {
   };
 
   const activeModeObj = modes.find((m) => m.value === activeMode);
+
+  const { transcript, resetTranscript } = useSpeechRecognition();
+  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const [isListening, setIsListening] = useState(false);
+
+  useEffect(() => {
+    if (transcript && transcript.trim() !== "") {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      const id = setTimeout(() => {
+        console.log('Silence detected, stopping listening...');
+        stopListening();
+      }, 3000);
+      setTimeoutId(id);
+    }
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [transcript]);
+
+  useEffect(() => {
+    if (!isListening) {
+      startListening();
+      setIsListening(true);
+      resetTranscript();
+    }
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      stopListening();
+    };
+  }, [isListening]);
+    
+
+  const stopListening = async () => {
+    SpeechRecognition.stopListening();
+    if (transcript && transcript.trim() !== "") {
+      console.log(transcript);
+      await handleUserInput();
+    }    
+  };
+
+  const speak = (text: string) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.onend = () => {
+      console.log("Speech finished!");
+    };
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const handleUserInput = async () => {
+    console.log("Stop clicked!");
+    try {
+      const response = await fetch("http://127.0.0.1:8001/receive-spoken-request", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          request: transcript,
+          user_id: userId,
+        }),
+      });
+      console.log("Api request sent")
+      if (response.ok) {
+        const data = await response.json(); // contains the Gemini response
+        console.log(data);
+        speak(data.message);
+        resetTranscript();
+        startListening();
+      } else {
+        console.warn("error occurred in fetching response");
+      }
+    } catch (error) {
+      console.warn("Error: " + error);
+    }
+  };
+
+  const startListening = () => {
+    // Start listening again after a response is received
+    SpeechRecognition.startListening({
+      continuous: true,
+      language: 'en-US',
+    });
+    setIsListening(true);
+  };
 
   return (
     <div className="flex justify-center w-full">
