@@ -1,43 +1,47 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Play, Pause, SkipForward, SkipBack, Volume2 } from "lucide-react"
+import { useState } from "react";
+import { Play, Pause, SkipForward, SkipBack, Volume2 } from "lucide-react";
 
 interface Song {
-  id: string
-  title: string
-  artist: string
-  duration: string
+  id: string;
+  title: string;
+  artist: string;
+  duration: string;
 }
 
-export default function MusicPlayer({songs}:{songs:Song[]}) {
-  const [currentSong, setCurrentSong] = useState<string | null>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
+export default function MusicPlayer({ songs }: { songs: Song[] }) {
+  const [currentSong, setCurrentSong] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   // Mock data - would be fetched from an endpoint in a real implementation
 
-    // Function to toggle play/pause state
-   
+  // Function to toggle play/pause state
 
   const togglePlay = (songId: string) => {
     if (currentSong === songId && isPlaying) {
-      setIsPlaying(false)
+      setIsPlaying(false);
     } else {
-      setCurrentSong(songId)
-      setIsPlaying(true)
+      setCurrentSong(songId);
+      setIsPlaying(true);
     }
-  }
+  };
 
   return (
     <div className="w-full max-w-3xl mx-auto mt-8 bg-white/10 backdrop-blur-sm rounded-lg overflow-hidden shadow-lg">
       <div className="p-4 bg-purple-700/80">
         <h2 className="text-xl font-bold text-white">Music for Your Mode</h2>
-        <p className="text-purple-100">Enhance your experience with these curated tracks</p>
+        <p className="text-purple-100">
+          Enhance your experience with these curated tracks
+        </p>
       </div>
 
       <div className="divide-y divide-purple-600/20">
         {songs.map((song) => (
-          <div className="flex items-center justify-between p-4 hover:bg-purple-600/20 transition-colors">
+          <div
+            key={song.id}
+            className="flex items-center justify-between p-4 hover:bg-purple-600/20 transition-colors"
+          >
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => togglePlay(song.id)}
@@ -61,10 +65,16 @@ export default function MusicPlayer({songs}:{songs:Song[]}) {
 
       <div className="p-4 bg-purple-800/50 flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <button className="text-purple-200 hover:text-white" title="Skip Back">
+          <button
+            className="text-purple-200 hover:text-white"
+            title="Skip Back"
+          >
             <SkipBack className="w-5 h-5" />
           </button>
-          <button className="text-purple-200 hover:text-white" title="Skip Forward">
+          <button
+            className="text-purple-200 hover:text-white"
+            title="Skip Forward"
+          >
             <SkipForward className="w-5 h-5" />
           </button>
         </div>
@@ -76,6 +86,5 @@ export default function MusicPlayer({songs}:{songs:Song[]}) {
         </div>
       </div>
     </div>
-  )
+  );
 }
-
