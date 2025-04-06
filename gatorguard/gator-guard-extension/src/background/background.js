@@ -230,7 +230,7 @@ function handleBackendResponse(data) {
 
       chrome.notifications.create({
         type: "basic",
-        iconUrl: chrome.runtime.getURL("images/logo.jpg"),
+        iconUrl: chrome.runtime.getURL("images/sad.webp"),
         title: `${capitalize(currentMode)} Focus Mode`,
         message: `This website isn't ideal for ${currentMode} mode. Consider switching to something else.`,
       });
