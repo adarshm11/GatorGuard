@@ -99,16 +99,6 @@ const MainContent: React.FC = () => {
         </div>
         <div className="grid grid-cols-3 gap-3">
           <button
-            onClick={() => handleModeChange("work")}
-            className={`py-2 rounded-md transition-all duration-200 font-medium ${
-              currentMode === "work"
-                ? "bg-purple-600 text-white"
-                : "bg-yellow-300 text-purple-900 hover:bg-yellow-400"
-            }`}
-          >
-            Work
-          </button>
-          <button
             onClick={() => handleModeChange("study")}
             className={`py-2 rounded-md transition-all duration-200 font-medium ${
               currentMode === "study"
@@ -117,6 +107,16 @@ const MainContent: React.FC = () => {
             }`}
           >
             Study
+          </button>
+          <button
+            onClick={() => handleModeChange("work")}
+            className={`py-2 rounded-md transition-all duration-200 font-medium ${
+              currentMode === "work"
+                ? "bg-purple-600 text-white"
+                : "bg-yellow-300 text-purple-900 hover:bg-yellow-400"
+            }`}
+          >
+            Work
           </button>
           <button
             onClick={() => handleModeChange("leisure")}

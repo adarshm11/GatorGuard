@@ -17,7 +17,7 @@ const Logout = () => {
       <button
         type="submit"
         disabled={loading}
-        className="bg-gray-600 text-white text-sm px-4 py-2 rounded-md cursor-pointer w-full h-full hover:bg-black transition-colors duration-300 ease-in-out"
+        className="bg-gray-600 text-white text-sm px-4 py-2 rounded-md cursor-pointer w-full h-full hover:bg-gray-700 transition-colors duration-300 ease-in-out"
       >
         {loading ? "Signing out..." : "Sign out"}
       </button>

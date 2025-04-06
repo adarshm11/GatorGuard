@@ -15,7 +15,7 @@ const LoginGoogle = () => {
   return (
     <div
       onClick={handleGoogleLogin}
-      className="w-full gap-4 hover:cursor-pointer mt-6 h-12 bg-gray-800 rounded-md p-4 flex justify-center items-center"
+      className="w-full gap-4 hover:cursor-pointer mt-6 h-12 bg-gray-700 rounded-md p-4 flex justify-center items-center"
     >
       <FaGoogle className="text-white" />
       <p className="text-white">
