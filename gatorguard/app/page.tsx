@@ -66,8 +66,6 @@ export default function Home() {
     console.log(activeMode);
   }, [activeMode]);
 
-  
-
   const handleSubmitClick = async () => {
     console.log(`You selected ${activeMode}${submode ? ": " + submode : ""}`);
     setIsSubmitted(true);
