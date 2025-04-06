@@ -5,20 +5,20 @@ let isAuthenticated = false;
 let currentMode = "work"; // Default to work mode
 
 // Add these global variables to store the additional settings
-let studySubmodeSet = null;
+let studySubmodeSelect = null;
 let lyricsStatus = false;
 
 // In background.js initialization
 chrome.storage.local.get(
-  ["currentMode", "studySubmodeSet", "lyricsStatus"],
+  ["currentMode", "studySubmodeSelect", "lyricsStatus"],
   (result) => {
     if (result.currentMode) {
       currentMode = result.currentMode;
       console.log(`Loaded saved mode: ${currentMode}`);
     }
 
-    if (result.studySubmodeSet !== undefined) {
-      studySubmodeSet = result.studySubmodeSet;
+    if (result.studySubmodeSelect !== undefined) {
+      studySubmodeSelect = result.studySubmodeSelect;
     }
 
     if (result.lyricsStatus !== undefined) {
@@ -41,7 +41,7 @@ function syncModeWithDatabase() {
       .then((data) => {
         if (data.mode) {
           currentMode = data.mode;
-          studySubmodeSet = data.study_submode_set;
+          studySubmodeSelect = data.study_submode_Select;
           lyricsStatus = data.lyrics_status;
 
           console.log("Mode synced from database:", data);
@@ -49,7 +49,7 @@ function syncModeWithDatabase() {
           // Update local storage
           chrome.storage.local.set({
             currentMode: currentMode,
-            studySubmodeSet: studySubmodeSet,
+            studySubmodeSelect: studySubmodeSelect,
             lyricsStatus: lyricsStatus,
           });
 
@@ -58,7 +58,7 @@ function syncModeWithDatabase() {
             type: "BACKGROUND_STATE_UPDATED",
             data: {
               currentMode: currentMode,
-              studySubmodeSet: studySubmodeSet,
+              studySubmodeSelect: studySubmodeSelect,
               lyricsStatus: lyricsStatus,
             },
           });
@@ -115,9 +115,8 @@ function checkAuthentication() {
     });
 }
 
-// Check auth on extension start and every 5 minutes
-checkAuthentication();
-setInterval(checkAuthentication, 5 * 60 * 1000);
+// checkAuthentication();
+// setInterval(checkAuthentication, 5 * 60 * 1000);
 
 function processTab(tab) {
   try {
@@ -215,17 +214,34 @@ function sendLinkToJSBackend(url, title) {
       // Handle the allowed status
       if (data.allowed === true) {
         console.log(`Website is allowed for ${currentMode} mode`);
+
+        // Make sure any blur is removed if site is now allowed
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs && tabs.length > 0) {
+            chrome.tabs.sendMessage(tabs[0].id, { type: "REMOVE_BLUR" });
+          }
+        });
       } else {
         console.log(`Website is NOT allowed for ${currentMode} mode`);
+
         // Show a notification with the current mode
         chrome.notifications.create({
           type: "basic",
-          // Use chrome.runtime.getURL to get the absolute path to your extension's resources
           iconUrl: chrome.runtime.getURL("images/logo.jpg"),
           title: `${
             currentMode.charAt(0).toUpperCase() + currentMode.slice(1)
           } Focus Mode`,
           message: `This website isn't ideal for ${currentMode} mode. Consider switching to something more productive.`,
+        });
+
+        // Send message to content script to blur the page
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs && tabs.length > 0) {
+            chrome.tabs.sendMessage(tabs[0].id, {
+              type: "BLUR_PAGE",
+              mode: currentMode,
+            });
+          }
         });
       }
     })
@@ -295,13 +311,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       currentMode = message.mode;
 
       // Get any additional parameters
-      const studySubmodeSet = message.study_submode_set;
+      const studySubmodeSelect = message.study_submode_select;
       const lyricsStatus = message.lyrics_status;
 
       // Store the mode in chrome.storage for persistence
       chrome.storage.local.set({
         currentMode: currentMode,
-        studySubmodeSet: studySubmodeSet,
+        studySubmodeSelect: studySubmodeSelect,
         lyricsStatus: lyricsStatus,
       });
 
@@ -315,16 +331,32 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           },
           body: JSON.stringify({
             mode: currentMode,
-            study_submode_set: studySubmodeSet,
+            study_submode_select: studySubmodeSelect,
             lyrics_status: lyricsStatus,
           }),
         })
           .then((response) => response.json())
           .then((data) => {
             console.log("Mode updated in database:", data);
+
+            // NEW CODE: Also notify the FastAPI endpoint
+            return fetch("http://127.0.0.1:8000/received-mode", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                user_id: data.userId || "extension-user", // Use userId from response if available
+                mode: currentMode,
+                submode: studySubmodeSelect,
+              }),
+            });
+          })
+          .then((response) => {
+            if (response && response.ok) {
+              console.log("FastAPI endpoint notified of mode change");
+            }
           })
           .catch((error) => {
-            console.error("Failed to update mode in database:", error);
+            console.error("Failed to update mode:", error);
           });
       }
 
@@ -332,7 +364,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({
         success: true,
         newMode: currentMode,
-        studySubmodeSet: studySubmodeSet,
+        studySubmodeSelect: studySubmodeSelect,
         lyricsStatus: lyricsStatus,
       });
 
@@ -346,7 +378,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         type: "BACKGROUND_STATE_UPDATED",
         data: {
           currentMode: currentMode,
-          studySubmodeSet: studySubmodeSet,
+          studySubmodeSelect: studySubmodeSelect,
           lyricsStatus: lyricsStatus,
         },
       });
@@ -423,18 +455,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Function to fetch mode from database
 async function fetchModeFromDatabase() {
   try {
-    // Get the user's auth token from storage
-    const { token } = await chrome.storage.local.get("token");
-
-    if (!token) {
-      throw new Error("User not authenticated");
-    }
-
-    // Make request to your API
+    // Make request to your API using cookie-based auth
     const response = await fetch("http://localhost:3000/api/user/mode", {
       method: "GET",
+      credentials: "include", // Use cookies for authentication
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
     });
@@ -452,6 +477,56 @@ async function fetchModeFromDatabase() {
     return currentMode || "work";
   }
 }
+
+// Add handler for closing tabs
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === "CLOSE_CURRENT_TAB") {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs && tabs.length > 0) {
+        chrome.tabs.remove(tabs[0].id);
+      }
+    });
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.type === "CHECK_SHOULD_BLUR") {
+    // Check URL against allowed sites for current mode
+    const url = sender.tab ? sender.tab.url : null;
+    if (!url) {
+      sendResponse({ shouldBlur: false });
+      return true;
+    }
+
+    // Parse URL to check if it should be exempted
+    try {
+      const urlObj = new URL(url);
+
+      // Skip chrome:// URLs and localhost:3000
+      const isLocalhost3000 =
+        urlObj.hostname === "localhost" && urlObj.port === "3000";
+
+      if (
+        url.startsWith("chrome://") ||
+        url === "about:blank" ||
+        isLocalhost3000
+      ) {
+        sendResponse({ shouldBlur: false });
+        return true;
+      }
+
+      // Check if this site is allowed in current mode
+      // For now, let's assume we've already checked it in sendLinkToJSBackend
+      // We could implement caching of recently checked URLs here
+
+      sendResponse({ shouldBlur: false }); // Default - don't blur until checked
+    } catch (e) {
+      console.error("Error parsing URL:", e);
+      sendResponse({ shouldBlur: false });
+    }
+    return true;
+  }
+});
 
 // Send a message when background script initializes to verify it's running
 chrome.runtime
