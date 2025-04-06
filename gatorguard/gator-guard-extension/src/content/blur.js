@@ -40,7 +40,7 @@ function blurPage(mode) {
 
   // Add logo
   const logo = document.createElement("img");
-  logo.src = chrome.runtime.getURL("images/logo.jpg");
+  logo.src = chrome.runtime.getURL("images/sad.webp");
   logo.style.cssText = `
     width: 80px;
     height: 80px;
