@@ -26,7 +26,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-linear-to-b from-violet-700 to-yellow-500`}
+        className={`${geistSans.variable} ${geistMono.variable} 
+        bg-fixed min-h-screen antialiased bg-linear-to-b from-violet-700 to-yellow-500`}
       >
         <div className="mx-auto max-w-screen-lg h-screen flex flex-col">
           <Navbar />

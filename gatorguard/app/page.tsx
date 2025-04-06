@@ -5,9 +5,7 @@ import type React from "react";
 import { useState, useEffect } from "react";
 import { createClient } from "./utils/supabase/client";
 // @ts-ignore
-import SpeechRecognition, {
-  useSpeechRecognition,
-} from "react-speech-recognition";
+import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
 
 import {
   BookOpen,
@@ -74,6 +72,10 @@ export default function Home() {
     setActiveMode(mode);
     setSubmode(null);
   };
+
+  const handleSetActiveSubmode = (sub: SubmodeValue) => {
+    setSubmode(submode === sub ? null : sub)
+  }
 
   useEffect(() => {
     async function getUser() {
@@ -168,14 +170,22 @@ export default function Home() {
   const { transcript, resetTranscript } = useSpeechRecognition();
   const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const [isListening, setIsListening] = useState(false);
+  const [waitingForCommand, setWaitingForCommand] = useState(true);
 
-  useEffect(() => {
+  useEffect(() => { // when transcript changes -> wait 3 sec, then evaluate
     if (transcript && transcript.trim() !== "") {
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
       const id = setTimeout(() => {
         console.log("Silence detected, stopping listening...");
+        if (transcript && transcript.toLowerCase().includes("hey gator")) {
+          console.log("Hey Gator detected, now waiting for command...");
+          speak("Gator is ready!")
+          setWaitingForCommand(false);
+          resetTranscript();
+          return;
+        }
         stopListening();
       }, 3000);
       setTimeoutId(id);
@@ -187,7 +197,7 @@ export default function Home() {
     };
   }, [transcript]);
 
-  useEffect(() => {
+  useEffect(() => { // start listening on load
     if (!isListening) {
       startListening();
       setIsListening(true);
@@ -201,11 +211,34 @@ export default function Home() {
     };
   }, [isListening]);
 
+  const startListening = () => {
+    // Start listening again after a response is received
+    SpeechRecognition.startListening({
+      continuous: true,
+      language: "en-US",
+    });
+    setIsListening(true);
+  };
+
   const stopListening = async () => {
     SpeechRecognition.stopListening();
     if (transcript && transcript.trim() !== "") {
       console.log(transcript);
-      await handleUserInput();
+      if (transcript.toLowerCase().includes("stop")) { // "stop" -> makes it so that 
+        speak("Listening stopped, reload to restart.");
+        console.log("Stop heard -> stopping listening.")
+        return; // should not process anything else
+      }
+      if (waitingForCommand && transcript.toLowerCase().includes("hey gator")) {
+        console.log("Hey Gator detected, now waiting for command...");
+        speak("Gator is ready!")
+        setWaitingForCommand(false);
+        resetTranscript();
+        startListening();
+      } else if (!waitingForCommand) {
+        console.log("Command received and processed.");
+        await handleUserInput();
+      }
     }
   };
 
@@ -218,7 +251,6 @@ export default function Home() {
   };
 
   const handleUserInput = async () => {
-    console.log("Stop clicked!");
     try {
       const response = await fetch(
         "http://127.0.0.1:8001/receive-spoken-request",
@@ -236,7 +268,13 @@ export default function Home() {
         const data = await response.json(); // contains the Gemini response
         console.log(data);
         speak(data.message);
+        handleSetActiveMode(data.mode as ModeValue);
+        if (data.submode) {
+          setSubmode(data.submode);
+        }
+        // set the button corresponding to data.mode to be selected
         resetTranscript();
+        setWaitingForCommand(true);
         startListening();
       } else {
         console.warn("error occurred in fetching response");
@@ -244,15 +282,6 @@ export default function Home() {
     } catch (error) {
       console.warn("Error: " + error);
     }
-  };
-
-  const startListening = () => {
-    // Start listening again after a response is received
-    SpeechRecognition.startListening({
-      continuous: true,
-      language: "en-US",
-    });
-    setIsListening(true);
   };
 
   return (
@@ -340,9 +369,7 @@ export default function Home() {
                       name="submode"
                       value={sub.value ?? ""}
                       checked={submode === sub.value}
-                      onChange={() =>
-                        setSubmode(submode === sub.value ? null : sub.value)
-                      }
+                      onChange={() => handleSetActiveSubmode(sub.value)}
                       className="sr-only"
                     />
                     <div

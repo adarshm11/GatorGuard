@@ -66,7 +66,7 @@ async def process_spoken_request(req: SpokenRequest):
             message = f"Set user mode to {mode}"
             if submode:
                 message += f': {submode}'
-            return {"message": message}
+            return {"message": message, "mode": mode, "submode": {submode if submode else None}}
         return {"error": f"Error accessing database: {db_response['error']}"}
 
     except Exception as e:
