@@ -63,7 +63,7 @@ export default function Player() {
   return (
     <div className="flex justify-center w-full min-h-screen">
       <main className="flex flex-col items-center justify-start w-full max-w-md p-6">
-        <div className="w-full mb-8">
+        <div className="w-full mb-4">
           <button
             onClick={() => router.back()}
             className="flex items-center gap-2 text-white hover:text-gray-300 transition-colors mb-6"
@@ -73,14 +73,14 @@ export default function Player() {
           </button>
 
           <div className="relative mb-8">
-            <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-white pb-1">
-              Music designed for your Gator Mode
+            <h1 className="text-4xl font-bold text-transparent text-center bg-clip-text bg-gradient-to-r from-yellow-400 to-white pb-1">
+              Gator Mix
             </h1>
-            <div className="absolute -top-4 -right-4 w-8 h-8 bg-emerald-500 rounded-full opacity-50 animate-pulse"></div>
+            {/* <div className="absolute -top-4 -right-4 w-8 h-8 bg-emerald-500 rounded-full opacity-50 animate-pulse"></div> */}
           </div>
 
-          <div className="bg-white/10 backdrop-blur-sm p-4 rounded-lg mb-8">
-            <h2 className="text-xl font-medium text-white">
+          <div className="bg-white/10 backdrop-blur-sm p-4 rounded-lg mb-2">
+            <h2 className="text-xl text-center font-medium text-white">
               {mode
                 ? `${mode.charAt(0).toUpperCase() + mode.slice(1)} Mode`
                 : "Mode"}
@@ -92,7 +92,7 @@ export default function Player() {
         </div>
 
         {isLoading ? (
-          <div className="w-full flex flex-col items-center justify-center py-12">
+          <div className="w-full flex flex-col items-center justify-center py-6">
             <div className="w-12 h-12 border-4 border-t-teal-500 border-white/30 rounded-full animate-spin"></div>
             <p className="mt-4 text-white">
               Loading your personalized playlist...
