@@ -196,56 +196,55 @@ function storeLink(url, title) {
 
 // Send to backend and handle response
 function sendLinkToJSBackend(url, title) {
-  // Use the global currentMode variable instead of hardcoding it
+  const payload = {
+    url,
+    title: title || url,
+    timestamp: new Date().toISOString(),
+    mode: currentMode,
+  };
+
   fetch("http://localhost:3000/api/stagehand", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      url: url,
-      title: title || url,
-      timestamp: new Date().toISOString(),
-      mode: currentMode,
-    }),
+    body: JSON.stringify(payload),
   })
-    .then((response) => response.json())
-    .then((data) => {
-      console.log("Backend response:", data);
+    .then((res) => res.json())
+    .then((data) => handleBackendResponse(data))
+    .catch((error) => console.error("Backend error:", error));
+}
 
-      // Handle the allowed status
-      if (data.allowed === true) {
-        console.log(`Website is allowed for ${currentMode} mode`);
+function handleBackendResponse(data) {
+  console.log("Backend response:", data);
 
-        // Make sure any blur is removed if site is now allowed
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-          if (tabs && tabs.length > 0) {
-            chrome.tabs.sendMessage(tabs[0].id, { type: "REMOVE_BLUR" });
-          }
-        });
-      } else {
-        console.log(`Website is NOT allowed for ${currentMode} mode`);
+  if (!chrome?.tabs) return;
 
-        // Show a notification with the current mode
-        chrome.notifications.create({
-          type: "basic",
-          iconUrl: chrome.runtime.getURL("images/logo.jpg"),
-          title: `${
-            currentMode.charAt(0).toUpperCase() + currentMode.slice(1)
-          } Focus Mode`,
-          message: `This website isn't ideal for ${currentMode} mode. Consider switching to something more productive.`,
-        });
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const activeTab = tabs?.[0];
+    if (!activeTab) return;
 
-        // Send message to content script to blur the page
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-          if (tabs && tabs.length > 0) {
-            chrome.tabs.sendMessage(tabs[0].id, {
-              type: "BLUR_PAGE",
-              mode: currentMode,
-            });
-          }
-        });
-      }
-    })
-    .catch((error) => console.error("Error:", error));
+    if (data.allowed) {
+      console.log(`Website is allowed for ${currentMode} mode`);
+      chrome.tabs.sendMessage(activeTab.id, { type: "REMOVE_BLUR" });
+    } else {
+      console.log(`Website is NOT allowed for ${currentMode} mode`);
+
+      chrome.notifications.create({
+        type: "basic",
+        iconUrl: chrome.runtime.getURL("images/logo.jpg"),
+        title: `${capitalize(currentMode)} Focus Mode`,
+        message: `This website isn't ideal for ${currentMode} mode. Consider switching to something else.`,
+      });
+
+      chrome.tabs.sendMessage(activeTab.id, {
+        type: "BLUR_PAGE",
+        mode: currentMode,
+      });
+    }
+  });
+}
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
 // Function to recheck current tab with new mode
@@ -338,22 +337,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           .then((response) => response.json())
           .then((data) => {
             console.log("Mode updated in database:", data);
-
-            // NEW CODE: Also notify the FastAPI endpoint
-            return fetch("http://127.0.0.1:8000/received-mode", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                user_id: data.userId || "extension-user", // Use userId from response if available
-                mode: currentMode,
-                submode: studySubmodeSelect,
-              }),
-            });
-          })
-          .then((response) => {
-            if (response && response.ok) {
-              console.log("FastAPI endpoint notified of mode change");
-            }
           })
           .catch((error) => {
             console.error("Failed to update mode:", error);

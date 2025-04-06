@@ -156,42 +156,41 @@ export async function POST(req) {
 
     const finalAllowed = titleResult && textContentResult;
 
-    const dbResponse = await addWebsiteToDB(
-      url,
-      title,
-      timestamp,
-      finalAllowed,
-      mode
-    );
-
-    if (!dbResponse.success) {
-      console.log(
-        "Error occurred while adding to DB:",
-        dbResponse.errorMessage
-      );
-    } else {
-      addedToDB = true;
-    }
-
     console.log("Closing Stagehand...");
     await stagehand.close();
     stagehand = null;
 
-    // Return the response with the result
-    return new Response(
-      JSON.stringify({
-        success: true,
-        allowed: finalAllowed,
-        textContent,
-        url,
-        title: title || url,
-        timestamp,
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    // Create the response object
+    const responseData = {
+      success: true,
+      allowed: finalAllowed,
+      textContent,
+      url,
+      title: title || url,
+      timestamp,
+    };
+
+    // Start adding to DB asynchronously
+    addWebsiteToDB(url, title, timestamp, finalAllowed, mode)
+      .then((dbResponse) => {
+        if (!dbResponse.success) {
+          console.log(
+            "Error occurred while adding to DB:",
+            dbResponse.errorMessage
+          );
+        } else {
+          console.log("Successfully added website to DB asynchronously");
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to add website to DB:", err);
+      });
+
+    // Return the response immediately without waiting for DB operation
+    return new Response(JSON.stringify(responseData), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Error:", error.message);
     console.error("Stack trace:", error.stack);
