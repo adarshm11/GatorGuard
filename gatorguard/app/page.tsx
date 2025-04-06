@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import MusicPlayer from "./components/music-player";
 import { createClient } from "./utils/supabase/client";
+
 
 type ModeValue = "study" | "work" | "leisure" | null;
 type SubmodeValue = "interview" | "school" | null;
@@ -35,38 +37,77 @@ export default function Home() {
   const [activeMode, setActiveMode] = useState<ModeValue>(null);
   const [submode, setSubmode] = useState<SubmodeValue>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [generateSongs,setGenerateSongs]=useState([]);
 
   const handleSetActiveMode = (mode: ModeValue) => {
     setActiveMode(mode);
     setSubmode(null);
+    setIsSubmitted(false)
   };
 
   useEffect(() => {
     async function getUser() {
       const supabase = createClient();
       const { data, error } = await supabase.auth.getUser();
-
+  
       if (error || !data?.user) {
         console.log("User does not exist");
       } else {
-        setUserId(data?.user.id);
+        setUserId(data.user.id);
       }
     }
+  
     getUser();
   }, []);
+  
 
   useEffect(() => {
     console.log(activeMode);
   }, [activeMode]);
 
+  
+
   const handleSubmitClick = async () => {
     console.log(`You selected ${activeMode}${submode ? ": " + submode : ""}`);
-
+    setIsSubmitted(true);
     if (!userId) {
       console.warn("User not authenticated");
       // You might want to redirect to login page or show a message
       return;
     }
+
+    try{
+      const response=await fetch('http://localhost:8000/generate-songs',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json'
+        },
+        body:JSON.stringify({
+          mode_select:activeMode,
+          sub_mode_select:submode,
+          lyrics:true // For now
+        })
+      })
+
+      if(response.ok){
+        console.log("Response received!")
+        const data=await response.json()
+        setGenerateSongs(data)
+        console.log(data)
+      }
+      else{
+        console.log("Unable to connect to the backend api route")
+        console.log("Error: "+response.statusText)
+
+      }
+    }catch(error){
+      console.log("Error with fetching songs")
+      console.warn("Error: "+error)
+    }
+
+    
+    
 
     // send to API with userId
     try {
@@ -89,6 +130,8 @@ export default function Home() {
       console.warn("Error: post request failed" + error);
     }
   };
+
+
 
   const activeModeObj = modes.find((m) => m.value === activeMode);
 
@@ -158,6 +201,7 @@ export default function Home() {
               onClick={() => {
                 setActiveMode(null);
                 setSubmode(null);
+                setIsSubmitted(false) // Reset submission state
               }}
               className="mt-4 px-4 py-2 mx-2 cursor-pointer bg-red-500 text-white rounded hover:bg-red-800 transition-colors duration-500 ease-in-out"
             >
@@ -165,6 +209,8 @@ export default function Home() {
             </button>
           </div>
         )}
+        {/* Music Player - only shown after submission */}
+        {isSubmitted && activeMode && <MusicPlayer songs={generateSongs} />}
       </main>
     </div>
   );
