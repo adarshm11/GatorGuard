@@ -9,11 +9,12 @@ interface Song {
   id: string;
   title: string;
   artist: string;
-  duration: string;
+  song_length: number;
+  link:string;
 }
 
 export default function Player() {
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [generateSongs, setGenerateSongs] = useState<Song[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -40,7 +41,7 @@ export default function Player() {
 
         if (response.ok) {
           const data = await response.json();
-          setSongs(data);
+          setGenerateSongs(data);
         } else {
           console.log("Unable to connect to the backend api route");
         }
@@ -99,7 +100,7 @@ export default function Player() {
           </div>
         ) : (
           <div className="w-full animate-fadeIn">
-            <MusicPlayer songs={songs} />
+            <MusicPlayer songs={generateSongs} />
           </div>
         )}
       </main>

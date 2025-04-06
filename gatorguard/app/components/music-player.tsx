@@ -1,12 +1,13 @@
 import { useState } from "react"
 import { Play, Pause, SkipForward, SkipBack, Volume2,Music2 } from "lucide-react"
+import Link from 'next/link';
 
 interface Song {
   id: string
   title: string
   artist: string
   song_length: number
-  link:string 
+  url:string 
 }
 
 export default function MusicPlayer({songs}:{songs:Song[]}) {
@@ -33,9 +34,9 @@ export default function MusicPlayer({songs}:{songs:Song[]}) {
       </div>
 
       <div className="divide-y divide-purple-600/20">
-        {songs.map((song) => (
+        {songs.map((song,index) => (
           <div
-            key={song.id}
+            key={index}
             className="flex items-center justify-between p-4 hover:bg-purple-600/20 transition-colors"
           >
             <div className="flex items-center space-x-4">
@@ -50,12 +51,10 @@ export default function MusicPlayer({songs}:{songs:Song[]}) {
                 )}
               </button>
               <div>
-                <h3 className="font-medium text-white">{song.title}</h3>
+                <h3 className="font-medium text-white"> <a href={song.url}target='_blank' rel="noopener noreferrer"> {song.title}  </a>  </h3>
                 <p className="text-sm text-purple-200">{song.artist}</p>
               </div>
-              <span className="text-purple-200">{song.song_length}</span>
             </div>
-            <span className="text-purple-200">{song.duration}</span>
           </div>
         ))}
       </div>

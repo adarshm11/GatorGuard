@@ -66,6 +66,8 @@ export default function Home() {
   const [submode, setSubmode] = useState<SubmodeValue>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [generateSongs,setGenerateSongs]=useState([]);
+
 
   const handleSetActiveMode = (mode: ModeValue) => {
     setActiveMode(mode);
@@ -102,6 +104,35 @@ export default function Home() {
       return;
     }
 
+    try{
+      const response=await fetch('http://localhost:8000/generate-songs',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json'
+        },
+        body:JSON.stringify({
+          mode_select:activeMode,
+          sub_mode_select:submode,
+          lyrics:true // For now
+        })
+      })
+  
+      if(response.ok){
+        console.log("Response received!")
+        const data=await response.json()
+        setGenerateSongs(data)
+        console.log(data)
+      }
+      else{
+        console.log("Unable to connect to the backend api route")
+        console.log("Error: "+response.statusText)
+  
+      }
+    }catch(error){
+      console.log("Error with fetching songs")
+      console.warn("Error: "+error)
+    }
+
     try {
       const response = await fetch("http://127.0.0.1:8000/received-mode", {
         method: "POST",
@@ -119,6 +150,7 @@ export default function Home() {
     } catch (error) {
       console.warn("Error: post request failed" + error);
     }
+
 
     setIsLoading(false);
 
