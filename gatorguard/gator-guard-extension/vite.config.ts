@@ -21,6 +21,10 @@ export default defineConfig({
           src: "public/images",
           dest: ".",
         },
+        {
+          src: "src/content/blur.js", 
+          dest: ".",                  
+        },
       ],
     }),
     {
