@@ -1,19 +1,18 @@
-import { useState } from "react"
-import { Play, Pause, SkipForward, SkipBack, Volume2,Music2 } from "lucide-react"
-import Link from 'next/link';
+import { useState } from "react";
+import { Play, Pause, SkipForward, SkipBack, Volume2 } from "lucide-react";
 
 interface Song {
-  id: string
-  title: string
-  artist: string
-  song_length: number
-  url:string 
+  id: string;
+  title: string;
+  artist: string;
+  song_length: number;
+  link: string;
 }
 
-export default function MusicPlayer({songs}:{songs:Song[]}) {
-  const [currentSong, setCurrentSong] = useState<string | null>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [showLyrics,setShowLyrics]=useState(false)
+export default function MusicPlayer({ songs = [] }: { songs?: Song[] }) {
+  const [currentSong, setCurrentSong] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [showLyrics, setShowLyrics] = useState(false);
 
   const togglePlay = (songId: string) => {
     if (currentSong === songId && isPlaying) {
@@ -74,14 +73,20 @@ export default function MusicPlayer({songs}:{songs:Song[]}) {
             <SkipForward className="w-5 h-5" />
           </button>
         </div>
-  
+
         {/* Footer player bar */}
         <div className="p-4 bg-purple-800/50 flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <button className="text-purple-200 hover:text-white" title="Skip Back">
+            <button
+              className="text-purple-200 hover:text-white"
+              title="Skip Back"
+            >
               <SkipBack className="w-5 h-5" />
             </button>
-            <button className="text-purple-200 hover:text-white" title="Skip Forward">
+            <button
+              className="text-purple-200 hover:text-white"
+              title="Skip Forward"
+            >
               <SkipForward className="w-5 h-5" />
             </button>
           </div>
@@ -95,5 +100,4 @@ export default function MusicPlayer({songs}:{songs:Song[]}) {
       </div>
     </div>
   );
-
 }
