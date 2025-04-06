@@ -33,34 +33,29 @@ export default function MusicPlayer({ songs = [] }: { songs?: Song[] }) {
       </div>
 
       <div className="divide-y divide-purple-600/20">
-        {Array.isArray(songs) ? (
-          songs.map((song) => (
-            <div
-              key={song.id}
-              className="flex items-center justify-between p-4 hover:bg-purple-600/20 transition-colors"
-            >
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => togglePlay(song.id)}
-                  className="w-10 h-10 flex items-center justify-center rounded-full bg-purple-600 hover:bg-purple-700 transition-colors"
-                >
-                  {currentSong === song.id && isPlaying ? (
-                    <Pause className="w-5 h-5 text-white" />
-                  ) : (
-                    <Play className="w-5 h-5 text-white" />
-                  )}
-                </button>
-                <div>
-                  <h3 className="font-medium text-white">{song.title}</h3>
-                  <p className="text-sm text-purple-200">{song.artist}</p>
-                </div>
-                <span className="text-purple-200">{song.song_length}</span>
+        {songs.map((song,index) => (
+          <div
+            key={index}
+            className="flex items-center justify-between p-4 hover:bg-purple-600/20 transition-colors"
+          >
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => togglePlay(song.id)}
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-purple-600 hover:bg-purple-700 transition-colors"
+              >
+                {currentSong === song.id && isPlaying ? (
+                  <Pause className="w-5 h-5 text-white" />
+                ) : (
+                  <Play className="w-5 h-5 text-white" />
+                )}
+              </button>
+              <div>
+                <h3 className="font-medium text-white"> <a href={song.url}target='_blank' rel="noopener noreferrer"> {song.title}  </a>  </h3>
+                <p className="text-sm text-purple-200">{song.artist}</p>
               </div>
             </div>
-          ))
-        ) : (
-          <div className="p-4 text-center text-white">No songs available</div>
-        )}
+          </div>
+        ))}
       </div>
 
       <div className="p-4 bg-purple-800/50 flex items-center justify-between">

@@ -10,6 +10,7 @@ from utils.spotify_helper import search_spotify_song
 from supabase_client import check_if_exists, retrieve_permission, add_website_to_db, SUPABASE_KEY, SUPABASE_URL, add_user_mode,update_user_mode
 import google.generativeai as genai
 import traceback
+import re
 
 from dotenv import load_dotenv
 import os
@@ -23,15 +24,14 @@ class UserMode(BaseModel):
     sub_mode_select:Optional[str]=None
     lyric_status:Optional[bool]=True
 
-class SongInfo(BaseModel):
+class SongLink(BaseModel):
     url:str
     title:str
     artist:str
     #album:str // we can add this latter if needed
-    song_length:Optional[float]=None
-
 class SongResponse(BaseModel):
-    all_songs:List[SongInfo]
+    all_songs:List[SongLink]
+
 
 @router.get("/testing")
 def test():
@@ -52,6 +52,7 @@ def process_song_link(mode_status:UserMode):
             query=f"""
             Recommend 5 songs related to {mode_status.mode_select} with a focus on concentration for {mode_status.sub_mode_select}.
             Only include songs with {mode_status.lyric_status}
+
             Generate me a new response, don't repeat the previous songs.: 
             Title - Artist - length of song - Spotify Link
             """
@@ -74,7 +75,9 @@ def process_song_link(mode_status:UserMode):
                     continue
 
                 title=part[0]
-                artist=part[1]
+                title=re.sub(r'^\d+\.','',title).strip()
+
+                artist=part[1].strip()
 
                 search_song=search_spotify_song(title,artist)
                 if search_song:
@@ -95,6 +98,7 @@ def process_song_link(mode_status:UserMode):
             query=f"""
             Recommend 5 songs related to {mode_status.mode_select}
             Only include songs with {song_type} 
+    
             Title - Artist -length of the song- Spotify Link
     
             """
@@ -117,7 +121,9 @@ def process_song_link(mode_status:UserMode):
                     continue
 
                 title=part[0]
-                artist=part[1]
+                title=re.sub(r'^\d+\.','',title).strip()
+
+                artist=part[1].strip()
 
                 search_song=search_spotify_song(title,artist)
                 if search_song:
