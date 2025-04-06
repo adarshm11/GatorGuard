@@ -140,7 +140,7 @@ function processTab(tab) {
       !tab.url ||
       tab.url.startsWith("chrome://") ||
       tab.url === "about:blank" ||
-      tab.url.contains("open.spotify.com") ||
+      tab.url.includes("open.spotify.com") ||
       isLocalhost3000
     ) {
       console.log(`Skipping URL: ${tab.url}`);
