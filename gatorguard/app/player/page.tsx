@@ -99,7 +99,7 @@ export default function Player() {
           </div>
         ) : (
           <div className="w-full animate-fadeIn">
-            <MusicPlayer songs={songs} />
+            <MusicPlayer songs={Array.isArray(songs) ? songs : []} />
           </div>
         )}
       </main>

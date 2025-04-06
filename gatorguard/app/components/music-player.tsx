@@ -1,18 +1,18 @@
-import { useState } from "react"
-import { Play, Pause, SkipForward, SkipBack, Volume2,Music2 } from "lucide-react"
+import { useState } from "react";
+import { Play, Pause, SkipForward, SkipBack, Volume2 } from "lucide-react";
 
 interface Song {
-  id: string
-  title: string
-  artist: string
-  song_length: number
-  link:string 
+  id: string;
+  title: string;
+  artist: string;
+  song_length: number;
+  link: string;
 }
 
-export default function MusicPlayer({songs}:{songs:Song[]}) {
-  const [currentSong, setCurrentSong] = useState<string | null>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [showLyrics,setShowLyrics]=useState(false)
+export default function MusicPlayer({ songs = [] }: { songs?: Song[] }) {
+  const [currentSong, setCurrentSong] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [showLyrics, setShowLyrics] = useState(false);
 
   const togglePlay = (songId: string) => {
     if (currentSong === songId && isPlaying) {
@@ -33,31 +33,34 @@ export default function MusicPlayer({songs}:{songs:Song[]}) {
       </div>
 
       <div className="divide-y divide-purple-600/20">
-        {songs.map((song) => (
-          <div
-            key={song.id}
-            className="flex items-center justify-between p-4 hover:bg-purple-600/20 transition-colors"
-          >
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => togglePlay(song.id)}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-purple-600 hover:bg-purple-700 transition-colors"
-              >
-                {currentSong === song.id && isPlaying ? (
-                  <Pause className="w-5 h-5 text-white" />
-                ) : (
-                  <Play className="w-5 h-5 text-white" />
-                )}
-              </button>
-              <div>
-                <h3 className="font-medium text-white">{song.title}</h3>
-                <p className="text-sm text-purple-200">{song.artist}</p>
+        {Array.isArray(songs) ? (
+          songs.map((song) => (
+            <div
+              key={song.id}
+              className="flex items-center justify-between p-4 hover:bg-purple-600/20 transition-colors"
+            >
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => togglePlay(song.id)}
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-purple-600 hover:bg-purple-700 transition-colors"
+                >
+                  {currentSong === song.id && isPlaying ? (
+                    <Pause className="w-5 h-5 text-white" />
+                  ) : (
+                    <Play className="w-5 h-5 text-white" />
+                  )}
+                </button>
+                <div>
+                  <h3 className="font-medium text-white">{song.title}</h3>
+                  <p className="text-sm text-purple-200">{song.artist}</p>
+                </div>
+                <span className="text-purple-200">{song.song_length}</span>
               </div>
-              <span className="text-purple-200">{song.song_length}</span>
             </div>
-            <span className="text-purple-200">{song.duration}</span>
-          </div>
-        ))}
+          ))
+        ) : (
+          <div className="p-4 text-center text-white">No songs available</div>
+        )}
       </div>
 
       <div className="p-4 bg-purple-800/50 flex items-center justify-between">
@@ -75,14 +78,20 @@ export default function MusicPlayer({songs}:{songs:Song[]}) {
             <SkipForward className="w-5 h-5" />
           </button>
         </div>
-  
+
         {/* Footer player bar */}
         <div className="p-4 bg-purple-800/50 flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <button className="text-purple-200 hover:text-white" title="Skip Back">
+            <button
+              className="text-purple-200 hover:text-white"
+              title="Skip Back"
+            >
               <SkipBack className="w-5 h-5" />
             </button>
-            <button className="text-purple-200 hover:text-white" title="Skip Forward">
+            <button
+              className="text-purple-200 hover:text-white"
+              title="Skip Forward"
+            >
               <SkipForward className="w-5 h-5" />
             </button>
           </div>
@@ -96,5 +105,4 @@ export default function MusicPlayer({songs}:{songs:Song[]}) {
       </div>
     </div>
   );
-
 }

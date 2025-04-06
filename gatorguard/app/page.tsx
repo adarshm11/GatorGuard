@@ -5,7 +5,9 @@ import type React from "react";
 import { useState, useEffect } from "react";
 import { createClient } from "./utils/supabase/client";
 // @ts-ignore
-import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
+import SpeechRecognition, {
+  useSpeechRecognition,
+} from "react-speech-recognition";
 
 import {
   BookOpen,
@@ -15,7 +17,6 @@ import {
   ArrowRight,
   RefreshCw,
 } from "lucide-react";
-
 
 type ModeValue = "study" | "work" | "leisure" | null;
 type SubmodeValue = "interview" | "school" | null;
@@ -86,7 +87,6 @@ export default function Home() {
 
     getUser();
   }, []);
-  
 
   useEffect(() => {
     console.log(activeMode);
@@ -143,7 +143,7 @@ export default function Home() {
         clearTimeout(timeoutId);
       }
       const id = setTimeout(() => {
-        console.log('Silence detected, stopping listening...');
+        console.log("Silence detected, stopping listening...");
         stopListening();
       }, 3000);
       setTimeoutId(id);
@@ -168,14 +168,13 @@ export default function Home() {
       stopListening();
     };
   }, [isListening]);
-    
 
   const stopListening = async () => {
     SpeechRecognition.stopListening();
     if (transcript && transcript.trim() !== "") {
       console.log(transcript);
       await handleUserInput();
-    }    
+    }
   };
 
   const speak = (text: string) => {
@@ -189,15 +188,18 @@ export default function Home() {
   const handleUserInput = async () => {
     console.log("Stop clicked!");
     try {
-      const response = await fetch("http://127.0.0.1:8001/receive-spoken-request", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-          request: transcript,
-          user_id: userId,
-        }),
-      });
-      console.log("Api request sent")
+      const response = await fetch(
+        "http://127.0.0.1:8001/receive-spoken-request",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            request: transcript,
+            user_id: userId,
+          }),
+        }
+      );
+      console.log("Api request sent");
       if (response.ok) {
         const data = await response.json(); // contains the Gemini response
         console.log(data);
@@ -216,7 +218,7 @@ export default function Home() {
     // Start listening again after a response is received
     SpeechRecognition.startListening({
       continuous: true,
-      language: 'en-US',
+      language: "en-US",
     });
     setIsListening(true);
   };
