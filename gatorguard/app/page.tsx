@@ -82,6 +82,11 @@ export default function Home() {
 
     getUser();
   }, []);
+  
+
+  useEffect(() => {
+    console.log(activeMode);
+  }, [activeMode]);
 
   const handleSubmitClick = async () => {
     console.log(`You selected ${activeMode}${submode ? ": " + submode : ""}`);

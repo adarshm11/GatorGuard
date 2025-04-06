@@ -1,22 +1,18 @@
-"use client";
-
-import { useState } from "react";
-import { Play, Pause, SkipForward, SkipBack, Volume2 } from "lucide-react";
+import { useState } from "react"
+import { Play, Pause, SkipForward, SkipBack, Volume2,Music2 } from "lucide-react"
 
 interface Song {
-  id: string;
-  title: string;
-  artist: string;
-  duration: string;
+  id: string
+  title: string
+  artist: string
+  song_length: number
+  link:string 
 }
 
-export default function MusicPlayer({ songs }: { songs: Song[] }) {
-  const [currentSong, setCurrentSong] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-
-  // Mock data - would be fetched from an endpoint in a real implementation
-
-  // Function to toggle play/pause state
+export default function MusicPlayer({songs}:{songs:Song[]}) {
+  const [currentSong, setCurrentSong] = useState<string | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [showLyrics,setShowLyrics]=useState(false)
 
   const togglePlay = (songId: string) => {
     if (currentSong === songId && isPlaying) {
@@ -57,6 +53,7 @@ export default function MusicPlayer({ songs }: { songs: Song[] }) {
                 <h3 className="font-medium text-white">{song.title}</h3>
                 <p className="text-sm text-purple-200">{song.artist}</p>
               </div>
+              <span className="text-purple-200">{song.song_length}</span>
             </div>
             <span className="text-purple-200">{song.duration}</span>
           </div>
@@ -78,13 +75,26 @@ export default function MusicPlayer({ songs }: { songs: Song[] }) {
             <SkipForward className="w-5 h-5" />
           </button>
         </div>
-        <div className="flex items-center space-x-2">
-          <Volume2 className="w-4 h-4 text-purple-200" />
-          <div className="w-24 h-1 bg-purple-600/30 rounded-full">
-            <div className="w-1/2 h-full bg-purple-400 rounded-full"></div>
+  
+        {/* Footer player bar */}
+        <div className="p-4 bg-purple-800/50 flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button className="text-purple-200 hover:text-white" title="Skip Back">
+              <SkipBack className="w-5 h-5" />
+            </button>
+            <button className="text-purple-200 hover:text-white" title="Skip Forward">
+              <SkipForward className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Volume2 className="w-4 h-4 text-purple-200" />
+            <div className="w-24 h-1 bg-purple-600/30 rounded-full">
+              <div className="w-1/2 h-full bg-purple-400 rounded-full"></div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
+
 }
