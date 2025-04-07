@@ -1,6 +1,6 @@
 # GatorGuard
 
-## System Architecture
+## Software Architecture
 ![Screenshot 2025-04-06 023937](https://github.com/user-attachments/assets/3c826906-28f2-4af3-81cd-922a99a58977)
 ## Inspiration
 
