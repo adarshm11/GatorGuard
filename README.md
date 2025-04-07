@@ -23,7 +23,7 @@ GatorGuard is a full-stack productivity tool that helps users manage their brows
 
 The GatorGuard browser extension actively monitors the content of the current tab and determines whether it aligns with the selected mode. If a user strays from their intended focus area, the extension gently notifies them, helping them return to their priorities.
 
-## How We Built It
+## Tech Stack
 
 **Frontend:**  
 - Next.js  
