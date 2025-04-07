@@ -26,7 +26,8 @@ The GatorGuard browser extension actively monitors the content of the current ta
 **Frontend:**  
 - Next.js  
 - React  
-- Tailwind CSS  
+- Tailwind CSS
+- Shadcn
 
 **Backend:**  
 - FastAPI  
