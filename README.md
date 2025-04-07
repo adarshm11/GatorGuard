@@ -1,5 +1,7 @@
 # GatorGuard
 
+## System Architecture
+![Screenshot 2025-04-06 023937](https://github.com/user-attachments/assets/3c826906-28f2-4af3-81cd-922a99a58977)
 ## Inspiration
 
 Studies have found that more than half of Gen Z has experienced burnout and/or consistent stress and worry. As college students, we have felt the impact of burnout and stress firsthand. This is why we built GatorGuard, an immersive, AI-powered productivity application that helps users stay focused while also managing their stress and burnout levels.
@@ -40,4 +42,8 @@ The GatorGuard browser extension actively monitors the content of the current ta
 
 **Database:**  
 - Supabase
+
+
+
+
 
